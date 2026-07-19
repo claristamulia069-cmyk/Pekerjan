@@ -2,7 +2,7 @@
 // KETUA.JS - Dashboard Ketua
 // ============================================================
 
-import { db, currentUser } from '../app.js';
+import { db, currentUser, auth } from '../app.js';
 import { 
     doc, 
     getDoc, 
@@ -14,6 +14,7 @@ import {
     orderBy, 
     where 
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
+import { sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js';
 import { decryptPassword, addPoints } from '../utils.js';
 
 const DIVISIONS = ['acara', 'logistik', 'akademi', 'dekdok'];
@@ -280,7 +281,6 @@ async function loadUserPasswords() {
 export async function resetUserPassword(uid) {
     if (!confirm('Yakin akan mereset password user ini?')) return;
     try {
-        // Kirim email reset password
         const userDoc = await getDoc(doc(db, 'users', uid));
         const email = userDoc.data().email;
         await sendPasswordResetEmail(auth, email);
@@ -290,7 +290,7 @@ export async function resetUserPassword(uid) {
     }
 }
 
-// Ekspos fungsi ke window agar bisa dipanggil dari HTML
+// Ekspos fungsi ke window
 window.setDeadline = setDeadline;
 window.switchKetuaTab = switchKetuaTab;
 window.resetUserPassword = resetUserPassword;
