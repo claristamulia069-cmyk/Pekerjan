@@ -1,7 +1,23 @@
-import { db, currentUser } from '../app.js';
-import { collection, getDocs, query, orderBy, doc, updateDoc, getDoc, addDoc } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
-import { addPoints, exportToWord } from '../utils.js';
+// ============================================================
+// SEKRETARIS.JS
+// ============================================================
 
+import { db, currentUser } from '../app.js';
+import { 
+    collection, 
+    addDoc, 
+    getDocs, 
+    query, 
+    orderBy, 
+    doc, 
+    updateDoc, 
+    getDoc 
+} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
+import { addPoints, exportActivitiesToWord } from '../utils.js';
+
+// ============================================================
+// RENDER HALAMAN SEKRETARIS
+// ============================================================
 export function renderSekretaris(container) {
     container.innerHTML = `
         <h4>📝 Input Logbook / Hasil Rapat</h4>
@@ -13,20 +29,54 @@ export function renderSekretaris(container) {
         <div id="meetingList">Memuat...</div>
         <hr/>
         <h4>📋 REKAP SEMUA KEGIATAN SIE</h4>
-        <button class="btn-export" onclick="window.exportWordToDoc()">📄 Cetak ke Word</button>
+        <button class="btn-export" onclick="window.exportWord()">📄 Cetak ke Word</button>
         <div id="sekretarisAllActivities">Memuat semua kegiatan...</div>
     `;
     loadMeetings();
     loadAllActivitiesForSekretaris();
 }
 
-// Fungsi load semua kegiatan dengan tombol edit
+// ============================================================
+// LOGBOOK RAPAT
+// ============================================================
+export async function submitMeeting() {
+    const title = document.getElementById('meetingTitle').value.trim();
+    const summary = document.getElementById('meetingSummary').value.trim();
+    if (!title || !summary) { alert('Isi judul dan kesimpulan!'); return; }
+    await addDoc(collection(db, 'meetings'), {
+        title: title,
+        summary: summary,
+        date: new Date(),
+        uid: currentUser.uid
+    });
+    await addPoints(currentUser.uid, 1);
+    alert('Logbook tersimpan! Poin +1');
+    document.getElementById('meetingTitle').value = '';
+    document.getElementById('meetingSummary').value = '';
+    loadMeetings();
+}
+
+async function loadMeetings() {
+    const q = query(collection(db, 'meetings'), orderBy('date', 'desc'));
+    const snap = await getDocs(q);
+    let html = '';
+    snap.forEach(doc => {
+        const d = doc.data();
+        const ts = d.date?.toDate?.() || new Date();
+        html += `<div class="item-card"><strong>${d.title}</strong><br/>${d.summary}<br/><small>${ts.toLocaleString('id-ID')}</small></div>`;
+    });
+    document.getElementById('meetingList').innerHTML = html || 'Belum ada logbook.';
+}
+
+// ============================================================
+// REKAP KEGIATAN + EDIT
+// ============================================================
 async function loadAllActivitiesForSekretaris() {
     const el = document.getElementById('sekretarisAllActivities');
     try {
         const q = query(collection(db, 'activities'), orderBy('timestamp', 'desc'));
         const snap = await getDocs(q);
-        if (snap.empty) { el.innerHTML = 'Belum ada kegiatan.'; return; }
+        if (snap.empty) { el.innerHTML = 'Belum ada kegiatan dari sie manapun.'; return; }
         let html = '';
         snap.forEach(doc => {
             const d = doc.data();
@@ -48,9 +98,11 @@ async function loadAllActivitiesForSekretaris() {
     } catch(e) { el.innerHTML = 'Gagal memuat data.'; }
 }
 
-// Edit kegiatan
+// ============================================================
+// EDIT KEGIATAN
+// ============================================================
 export async function editActivity(docId) {
-    if (!currentUser || currentUser.role !== 'sekretaris') {
+    if (currentUser.role !== 'sekretaris' && currentUser.role !== 'superadmin') {
         alert('Hanya Sekretaris yang bisa mengedit.');
         return;
     }
@@ -74,10 +126,14 @@ export async function editActivity(docId) {
     }
 }
 
-// Export ke Word (panggil dari utils.js)
-export async function exportWordToDoc() {
-    const { exportActivitiesToWord } = await import('../utils.js');
-    exportActivitiesToWord();
+// ============================================================
+// EXPORT KE WORD
+// ============================================================
+export async function exportWord() {
+    await exportActivitiesToWord();
 }
 
-// ... fungsi lain (loadMeetings, submitMeeting) sama seperti sebelumnya
+// Ekspos fungsi ke window
+window.submitMeeting = submitMeeting;
+window.editActivity = editActivity;
+window.exportWord = exportWord;
