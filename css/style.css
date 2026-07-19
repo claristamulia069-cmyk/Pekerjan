@@ -1,0 +1,800 @@
+/* ============================================================
+   RESET & DASAR
+   ============================================================ */
+* {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: #f4f7fc;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* ============================================================
+   HALAMAN LOGIN
+   ============================================================ */
+#login-page {
+    max-width: 400px;
+    margin: 60px auto;
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+#login-page h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #0f172a;
+}
+
+.auth-toggle {
+    text-align: center;
+    margin-top: 15px;
+    color: #2563eb;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.auth-toggle:hover {
+    text-decoration: underline;
+}
+
+.reset-link {
+    color: #2563eb;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-block;
+    font-size: 14px;
+}
+
+.reset-link:hover {
+    text-decoration: underline;
+}
+
+#loginMessage,
+#registerMessage,
+#resetMessage {
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+#loginMessage,
+#registerMessage {
+    color: #b91c1c;
+}
+
+#resetMessage {
+    color: #2563eb;
+}
+
+/* ============================================================
+   TOMBOL LOGOUT
+   ============================================================ */
+.logout-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    z-index: 999;
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+    transition: 0.2s;
+}
+
+.logout-btn:hover {
+    background: #dc2626;
+    transform: scale(1.02);
+}
+
+/* ============================================================
+   HALAMAN / PAGE
+   ============================================================ */
+.page {
+    display: none;
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+}
+
+.page.active {
+    display: block;
+}
+
+/* ============================================================
+   TOMBOL KEMBALI
+   ============================================================ */
+.back-btn {
+    background: #e2e8f0;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #1e293b;
+    transition: 0.2s;
+}
+
+.back-btn:hover {
+    background: #cbd5e1;
+}
+
+/* ============================================================
+   GRID KARTU MENU
+   ============================================================ */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.card {
+    background: white;
+    padding: 30px 15px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    border: 2px solid transparent;
+}
+
+.card:hover {
+    border-color: #2563eb;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.15);
+}
+
+.card h3 {
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.card .badge {
+    font-size: 12px;
+    background: #e2e8f0;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-top: 6px;
+    display: inline-block;
+    color: #475569;
+}
+
+/* ============================================================
+   FORM
+   ============================================================ */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #334155;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: 0.2s;
+    background: #f8fafc;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    background: white;
+}
+
+.form-group input[type="file"] {
+    padding: 10px;
+    background: white;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+/* ============================================================
+   TOMBOL
+   ============================================================ */
+.btn-primary {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 14px;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+    transform: scale(1.02);
+}
+
+.btn-success {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 14px;
+}
+
+.btn-success:hover {
+    background: #16a34a;
+    transform: scale(1.02);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
+.btn-export {
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 15px;
+    transition: 0.2s;
+    font-size: 14px;
+}
+
+.btn-export:hover {
+    background: #7c3aed;
+    transform: scale(1.02);
+}
+
+.edit-btn {
+    background: #f59e0b;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.edit-btn:hover {
+    background: #d97706;
+}
+
+/* ============================================================
+   ITEM CARD (untuk daftar kegiatan, keuangan, dll)
+   ============================================================ */
+.item-card {
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    border-left: 6px solid #2563eb;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    transition: 0.2s;
+}
+
+.item-card:hover {
+    background: #f1f5f9;
+}
+
+.item-card img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.item-card .late {
+    background: #fee2e2;
+    color: #b91c1c;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.item-card .ontime {
+    background: #dcfce7;
+    color: #15803d;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.item-card a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.item-card a:hover {
+    text-decoration: underline;
+}
+
+/* ============================================================
+   FLEX ROW & STAT BOX
+   ============================================================ */
+.flex-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background: #f1f5f9;
+    padding: 20px;
+    border-radius: 12px;
+    flex: 1;
+    min-width: 150px;
+    text-align: center;
+}
+
+.stat-box h4 {
+    color: #475569;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.stat-box p {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* ============================================================
+   TAB
+   ============================================================ */
+.tab {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #e2e8f0;
+    border-radius: 30px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
+    color: #475569;
+    font-size: 14px;
+}
+
+.tab:hover {
+    background: #cbd5e1;
+}
+
+.tab.active {
+    background: #2563eb;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+    margin-top: 20px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ============================================================
+   DEADLINE INFO
+   ============================================================ */
+.deadline-set {
+    background: #fef9c3;
+    padding: 10px 16px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    border: 1px solid #facc15;
+    color: #854d0e;
+    font-size: 14px;
+}
+
+/* ============================================================
+   PROFIL CARD
+   ============================================================ */
+.profile-card {
+    background: #f1f5f9;
+    padding: 15px 20px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.profile-card .info {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.profile-card .info span {
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.profile-card .info strong {
+    color: #0f172a;
+}
+
+.profile-card .points {
+    background: #2563eb;
+    color: white;
+    padding: 6px 18px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+/* ============================================================
+   KETUA STATISTIK
+   ============================================================ */
+.ketua-stat {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.ketua-stat .stat {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.ketua-stat .stat .number {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ketua-stat .stat .label {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* ============================================================
+   LEADERBOARD
+   ============================================================ */
+.leaderboard-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    border-left: 4px solid #2563eb;
+    transition: 0.2s;
+}
+
+.leaderboard-item:hover {
+    background: #f8fafc;
+}
+
+.leaderboard-item .rank {
+    font-weight: 700;
+    color: #64748b;
+    width: 30px;
+}
+
+.leaderboard-item .name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.leaderboard-item .name small {
+    color: #64748b;
+    font-weight: 400;
+}
+
+.leaderboard-item .pts {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* ============================================================
+   LOG ENTRY (untuk DPL)
+   ============================================================ */
+.log-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #f8fafc;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    border-left: 3px solid #22c55e;
+}
+
+/* ============================================================
+   DPL GRID
+   ============================================================ */
+.dpl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.dpl-grid > div {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.dpl-grid h4 {
+    color: #1e293b;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+/* ============================================================
+   TABEL PASSWORD (Ketua)
+   ============================================================ */
+.user-password-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.user-password-table th {
+    background: #1e293b;
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.user-password-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.user-password-table tr:hover td {
+    background: #f1f5f9;
+}
+
+.user-password-table .btn-reset {
+    background: #f59e0b;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.user-password-table .btn-reset:hover {
+    background: #d97706;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .page {
+        padding: 20px 15px;
+    }
+
+    .card-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .card {
+        padding: 20px 10px;
+    }
+
+    .card h3 {
+        font-size: 15px;
+    }
+
+    .flex-row {
+        gap: 12px;
+    }
+
+    .stat-box {
+        min-width: 100px;
+        padding: 15px;
+    }
+
+    .stat-box p {
+        font-size: 22px;
+    }
+
+    .dpl-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-card {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .profile-card .info {
+        justify-content: center;
+    }
+
+    .profile-card .points {
+        align-self: center;
+    }
+
+    #login-page {
+        margin: 30px 10px;
+        padding: 25px;
+    }
+
+    .tab {
+        padding: 8px 14px;
+        font-size: 13px;
+        margin-bottom: 6px;
+    }
+
+    .item-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .item-card img {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+    }
+
+    .ketua-stat {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .logout-btn {
+        top: 10px;
+        right: 10px;
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+
+    .user-password-table {
+        font-size: 12px;
+    }
+
+    .user-password-table th,
+    .user-password-table td {
+        padding: 6px 8px;
+    }
+
+    .user-password-table .btn-reset {
+        padding: 2px 8px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .card {
+        padding: 15px 8px;
+    }
+
+    .card h3 {
+        font-size: 13px;
+    }
+
+    .card .badge {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
+
+    .ketua-stat {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .ketua-stat .stat .number {
+        font-size: 24px;
+    }
+}
+
+/* ============================================================
+   SCROLLBAR KUSTOM (opsional)
+   ============================================================ */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
