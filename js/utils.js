@@ -1,19 +1,33 @@
-import { db } from './app.js';
-import { collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
+// ============================================================
+// UTILS.JS - Fungsi Helper
+// ============================================================
 
+import { db } from './app.js';
+import { 
+    collection, 
+    getDocs, 
+    query, 
+    orderBy, 
+    doc, 
+    updateDoc 
+} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
+
+// ============================================================
+// 1. ENKRIPSI / DEKRIPSI PASSWORD
+// ============================================================
 const SALT = 'rahasiaPanitia2024';
 
-// Enkripsi password
 export function encryptPassword(password) {
     return btoa(password + SALT);
 }
 
-// Dekripsi password
 export function decryptPassword(encrypted) {
     return atob(encrypted).replace(SALT, '');
 }
 
-// Tambah poin
+// ============================================================
+// 2. TAMBAH POIN
+// ============================================================
 export async function addPoints(uid, increment) {
     try {
         const userRef = doc(db, 'users', uid);
@@ -25,7 +39,9 @@ export async function addPoints(uid, increment) {
     }
 }
 
-// Export ke Word
+// ============================================================
+// 3. EXPORT KE WORD
+// ============================================================
 export async function exportActivitiesToWord() {
     try {
         const q = query(collection(db, 'activities'), orderBy('timestamp', 'desc'));
@@ -55,8 +71,8 @@ export async function exportActivitiesToWord() {
 
         const style = `
             <style>
-                table { border-collapse: collapse; width: 100%; font-family: Arial; }
-                th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+                table { border-collapse: collapse; width: 100%; font-family: Arial; font-size: 12px; }
+                th, td { border: 1px solid #333; padding: 6px; text-align: left; }
                 th { background: #2563eb; color: white; }
             </style>
         `;
