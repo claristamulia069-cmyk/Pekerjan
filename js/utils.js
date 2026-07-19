@@ -31,6 +31,7 @@ export function decryptPassword(encrypted) {
 export async function addPoints(uid, increment) {
     try {
         const userRef = doc(db, 'users', uid);
+        // Gunakan firebase global dari compat SDK
         await updateDoc(userRef, {
             points: firebase.firestore.FieldValue.increment(increment)
         });
