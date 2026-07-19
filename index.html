@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Manajemen Kepanitiaan</title>
+    <title>Sistem Kepanitiaan - Login</title>
     <!-- Firebase SDK (v9 compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <style>
@@ -40,29 +41,47 @@
         .tab-content { display: none; margin-top: 20px; }
         .tab-content.active { display: block; }
         .deadline-set { background: #fef9c3; padding: 10px 16px; border-radius: 10px; margin-bottom: 16px; border: 1px solid #facc15; }
+        #login-page { max-width: 400px; margin: 60px auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+        #login-page h2 { text-align: center; margin-bottom: 20px; }
+        .auth-toggle { text-align: center; margin-top: 15px; color: #2563eb; cursor: pointer; }
+        .logout-btn { position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: 600; z-index: 999; }
         @media (max-width: 600px) { .card-grid { grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
 <body>
 
+<!-- ===================== LOGOUT ===================== -->
+<button class="logout-btn" id="logoutBtn" style="display:none;" onclick="logout()">🚪 Logout</button>
+
 <div class="container" id="app">
-    <!-- ===================== HALAMAN UTAMA ===================== -->
-    <div id="page-home" class="page active">
-        <h1 style="text-align:center; margin-bottom:10px;">📋 Pilih Divisi</h1>
-        <p style="text-align:center; color:#64748b;">Kelompok BPH, Logistik, Akademi, Acara, Dekdok</p>
-        <div class="card-grid">
-            <div class="card" onclick="navigateTo('ketua')"><h3>👤 Ketua</h3><span class="badge">Set Deadline & Pantau</span></div>
-            <div class="card" onclick="navigateTo('bendahara')"><h3>💰 Bendahara</h3><span class="badge">Input Keuangan</span></div>
-            <div class="card" onclick="navigateTo('sekretaris')"><h3>📝 Sekretaris</h3><span class="badge">Logbook & Rekap</span></div>
-            <div class="card" onclick="navigateTo('acara')"><h3>🎉 Sie Acara</h3><span class="badge">Kegiatan</span></div>
-            <div class="card" onclick="navigateTo('logistik')"><h3>📦 Sie Logistik</h3><span class="badge">Kegiatan</span></div>
-            <div class="card" onclick="navigateTo('akademi')"><h3>📚 Sie Akademi</h3><span class="badge">Kegiatan</span></div>
-            <div class="card" onclick="navigateTo('dekdok')"><h3>📸 Sie Dekdok</h3><span class="badge">Kegiatan</span></div>
+    <!-- ===================== HALAMAN LOGIN ===================== -->
+    <div id="login-page">
+        <h2>🔐 Login</h2>
+        <div id="loginForm">
+            <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="email@example.com" /></div>
+            <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
+            <button class="btn-primary" onclick="login()" style="width:100%;">Masuk</button>
+            <p class="auth-toggle" onclick="toggleAuth('register')">Belum punya akun? Daftar di sini</p>
+            <div id="loginMessage" style="margin-top:10px; color:#b91c1c;"></div>
         </div>
+        <div id="registerForm" style="display:none;">
+            <div class="form-group"><label>Email</label><input type="email" id="registerEmail" placeholder="email@example.com" /></div>
+            <div class="form-group"><label>Password</label><input type="password" id="registerPassword" placeholder="••••••••" /></div>
+            <button class="btn-primary" onclick="register()" style="width:100%;">Daftar</button>
+            <p class="auth-toggle" onclick="toggleAuth('login')">Sudah punya akun? Login</p>
+            <div id="registerMessage" style="margin-top:10px; color:#b91c1c;"></div>
+        </div>
+    </div>
+
+    <!-- ===================== HALAMAN UTAMA (setelah login) ===================== -->
+    <div id="page-home" class="page">
+        <h1 style="text-align:center; margin-bottom:10px;">📋 Pilih Divisi</h1>
+        <p style="text-align:center; color:#64748b;" id="welcomeUser">Selamat datang, User</p>
+        <div class="card-grid" id="menuCards"></div>
         <p style="text-align:center; color:#94a3b8; font-size:14px;">⚠️ Upload melewati deadline akan tercatat sebagai <strong>Pelanggaran</strong></p>
     </div>
 
-    <!-- ===================== TEMPLATE DINAMIS ===================== -->
+    <!-- ===================== HALAMAN DINAMIS ===================== -->
     <div id="page-dynamic" class="page">
         <button class="back-btn" onclick="goHome()">⬅ Kembali ke Utama</button>
         <h2 id="dynamic-title">Judul</h2>
@@ -83,26 +102,193 @@
         appId: "1:123456789:web:abcdef"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
     const storage = firebase.storage();
 
     // ================================================================
     // 2. VARIABEL GLOBAL
     // ================================================================
-    let currentDivision = ''; // 'acara', 'logistik', 'bendahara', dsb.
+    let currentUser = null;       // user object dari Firebase
+    let currentUserRole = null;   // role dari Firestore
     const DIVISIONS = ['acara', 'logistik', 'akademi', 'dekdok'];
+    const ROLE_MENU = {
+        ketua: ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok'],
+        bendahara: ['bendahara'],
+        sekretaris: ['sekretaris'],
+        sie_acara: ['acara'],
+        sie_logistik: ['logistik'],
+        sie_akademi: ['akademi'],
+        sie_dekdok: ['dekdok']
+    };
+    // Mapping role ke label yang ditampilkan
+    const MENU_LABEL = {
+        ketua: { label: '👤 Ketua', desc: 'Set Deadline & Pantau' },
+        bendahara: { label: '💰 Bendahara', desc: 'Input Keuangan' },
+        sekretaris: { label: '📝 Sekretaris', desc: 'Logbook & Rekap' },
+        acara: { label: '🎉 Sie Acara', desc: 'Kegiatan' },
+        logistik: { label: '📦 Sie Logistik', desc: 'Kegiatan' },
+        akademi: { label: '📚 Sie Akademi', desc: 'Kegiatan' },
+        dekdok: { label: '📸 Sie Dekdok', desc: 'Kegiatan' }
+    };
 
     // ================================================================
-    // 3. NAVIGASI
+    // 3. AUTHENTICATION
+    // ================================================================
+    function toggleAuth(mode) {
+        if (mode === 'login') {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+        } else {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
+    }
+
+    async function login() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const pass = document.getElementById('loginPassword').value;
+        const msg = document.getElementById('loginMessage');
+        msg.innerText = '';
+        try {
+            const cred = await auth.signInWithEmailAndPassword(email, pass);
+            // User berhasil login, akan diproses oleh observer
+        } catch (e) {
+            msg.innerText = '❌ ' + e.message;
+        }
+    }
+
+    async function register() {
+        const email = document.getElementById('registerEmail').value.trim();
+        const pass = document.getElementById('registerPassword').value;
+        const msg = document.getElementById('registerMessage');
+        msg.innerText = '';
+        try {
+            const cred = await auth.createUserWithEmailAndPassword(email, pass);
+            // Setelah register, buat dokumen user dengan role default 'member'
+            await db.collection('users').doc(cred.user.uid).set({
+                email: email,
+                role: 'member',   // default, nanti diubah manual di Firestore
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            msg.innerText = '✅ Akun berhasil dibuat! Silakan login.';
+            // Kosongkan form
+            document.getElementById('registerEmail').value = '';
+            document.getElementById('registerPassword').value = '';
+            toggleAuth('login');
+        } catch (e) {
+            msg.innerText = '❌ ' + e.message;
+        }
+    }
+
+    function logout() {
+        auth.signOut();
+    }
+
+    // ================================================================
+    // 4. OBSERVER AUTH STATE
+    // ================================================================
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            currentUser = user;
+            document.getElementById('logoutBtn').style.display = 'block';
+            document.getElementById('login-page').style.display = 'none';
+            // Ambil role dari Firestore
+            try {
+                const doc = await db.collection('users').doc(user.uid).get();
+                if (doc.exists) {
+                    currentUserRole = doc.data().role || 'member';
+                } else {
+                    // Jika dokumen belum ada, buat dengan role member
+                    await db.collection('users').doc(user.uid).set({
+                        email: user.email,
+                        role: 'member',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    currentUserRole = 'member';
+                }
+            } catch (e) {
+                console.error('Gagal ambil role:', e);
+                currentUserRole = 'member';
+            }
+            // Tampilkan home
+            showHome();
+        } else {
+            currentUser = null;
+            currentUserRole = null;
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('login-page').style.display = 'block';
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-home').classList.remove('active');
+            document.getElementById('page-dynamic').classList.remove('active');
+            // Reset form login
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginMessage').innerText = '';
+            document.getElementById('registerMessage').innerText = '';
+        }
+    });
+
+    // ================================================================
+    // 5. MENU UTAMA (berdasarkan role)
+    // ================================================================
+    function showHome() {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-home').classList.add('active');
+        document.getElementById('page-dynamic').classList.remove('active');
+
+        const welcome = document.getElementById('welcomeUser');
+        if (currentUser) welcome.innerText = `Selamat datang, ${currentUser.email} (${currentUserRole})`;
+        else welcome.innerText = '';
+
+        const container = document.getElementById('menuCards');
+        let allowed = [];
+        if (currentUserRole === 'ketua') {
+            allowed = ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok'];
+        } else if (currentUserRole === 'bendahara') {
+            allowed = ['bendahara'];
+        } else if (currentUserRole === 'sekretaris') {
+            allowed = ['sekretaris'];
+        } else if (currentUserRole === 'sie_acara') {
+            allowed = ['acara'];
+        } else if (currentUserRole === 'sie_logistik') {
+            allowed = ['logistik'];
+        } else if (currentUserRole === 'sie_akademi') {
+            allowed = ['akademi'];
+        } else if (currentUserRole === 'sie_dekdok') {
+            allowed = ['dekdok'];
+        } else {
+            allowed = [];
+        }
+
+        if (allowed.length === 0) {
+            container.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#b91c1c;">❌ Role Anda (${currentUserRole}) tidak memiliki akses ke menu apapun. Hubungi admin.</p>`;
+            return;
+        }
+
+        let html = '';
+        allowed.forEach(key => {
+            const info = MENU_LABEL[key];
+            if (!info) return;
+            html += `<div class="card" onclick="navigateTo('${key}')"><h3>${info.label}</h3><span class="badge">${info.desc}</span></div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    // ================================================================
+    // 6. NAVIGASI & CEK AKSES
     // ================================================================
     function navigateTo(role) {
+        // Cek apakah role diizinkan untuk user saat ini
+        const allowed = getCurrentAllowedRoles();
+        if (!allowed.includes(role)) {
+            alert('Anda tidak memiliki akses ke halaman ini.');
+            return;
+        }
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        const home = document.getElementById('page-home');
-        const dyn = document.getElementById('page-dynamic');
-        home.classList.remove('active');
-        dyn.classList.add('active');
+        document.getElementById('page-home').classList.remove('active');
+        document.getElementById('page-dynamic').classList.add('active');
 
-        currentDivision = role;
         const titleMap = {
             'ketua': '👤 Panel Ketua',
             'bendahara': '💰 Panel Bendahara',
@@ -113,17 +299,26 @@
             'dekdok': '📸 Sie Dekdok'
         };
         document.getElementById('dynamic-title').innerText = titleMap[role] || role;
-
         renderPage(role);
     }
 
+    function getCurrentAllowedRoles() {
+        if (currentUserRole === 'ketua') return ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok'];
+        if (currentUserRole === 'bendahara') return ['bendahara'];
+        if (currentUserRole === 'sekretaris') return ['sekretaris'];
+        if (currentUserRole === 'sie_acara') return ['acara'];
+        if (currentUserRole === 'sie_logistik') return ['logistik'];
+        if (currentUserRole === 'sie_akademi') return ['akademi'];
+        if (currentUserRole === 'sie_dekdok') return ['dekdok'];
+        return [];
+    }
+
     function goHome() {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById('page-home').classList.add('active');
+        showHome();
     }
 
     // ================================================================
-    // 4. RENDER PER HALAMAN
+    // 7. RENDER HALAMAN (sama seperti sebelumnya, tapi dengan pengecekan)
     // ================================================================
     function renderPage(role) {
         const container = document.getElementById('dynamic-content');
@@ -134,7 +329,7 @@
         else container.innerHTML = '<p>Role tidak dikenal.</p>';
     }
 
-    // ---------- 4A. RENDER SIE (Acara, Logistik, Akademi, Dekdok) ----------
+    // ---------- 7A. RENDER SIE ----------
     function renderSie(container, division) {
         container.innerHTML = `
             <div class="deadline-set" id="deadlineInfo-${division}">⏳ Memuat deadline...</div>
@@ -200,7 +395,6 @@
         const fileInput = document.getElementById('actImage');
         if (!title) { alert('Judul wajib diisi!'); return; }
 
-        // Cek deadline
         let isLate = false;
         try {
             const doc = await db.collection('deadlines').doc(division).get();
@@ -235,7 +429,7 @@
         loadActivities(division);
     }
 
-    // ---------- 4B. RENDER BENDAHARA ----------
+    // ---------- 7B. RENDER BENDAHARA ----------
     function renderBendahara(container) {
         container.innerHTML = `
             <div class="flex-row">
@@ -268,7 +462,6 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         el.classList.add('active');
         document.getElementById('receiptField').style.display = (type === 'expense') ? 'block' : 'none';
-        // Ubah tombol utama
         const btns = document.querySelectorAll('#financeForm .btn-primary');
         btns.forEach(b => b.style.display = 'none');
         if (type === 'income') document.querySelector('#financeForm .btn-primary:first-of-type').style.display = 'inline-block';
@@ -330,7 +523,7 @@
         document.getElementById('financeList').innerHTML = html || 'Belum ada transaksi.';
     }
 
-    // ---------- 4C. RENDER SEKRETARIS ----------
+    // ---------- 7C. RENDER SEKRETARIS ----------
     function renderSekretaris(container) {
         container.innerHTML = `
             <h4>📝 Input Logbook / Hasil Rapat</h4>
@@ -398,7 +591,7 @@
         } catch(e) { el.innerHTML = 'Gagal memuat data.'; }
     }
 
-    // ---------- 4D. RENDER KETUA ----------
+    // ---------- 7D. RENDER KETUA ----------
     function renderKetua(container) {
         container.innerHTML = `
             <h4>⏰ Atur Deadline per Sie</h4>
@@ -465,18 +658,11 @@
     }
 
     // ================================================================
-    // 5. INISIALISASI
+    // 8. INISIALISASI
     // ================================================================
-    // Tampilkan home di awal
-    document.addEventListener('DOMContentLoaded', () => {
-        // Set default tab bendahara
-        if (document.querySelector('#financeForm .btn-primary')) {
-            document.querySelector('#financeForm .btn-primary:first-of-type').style.display = 'inline-block';
-            document.querySelector('#financeForm .btn-primary:last-of-type').style.display = 'none';
-        }
-    });
-
-    console.log('🚀 Aplikasi siap! Jangan lupa ganti firebaseConfig.');
+    // Halaman login tampil pertama (auth state akan menentukan)
+    // Saat refresh, observer akan menjalankan showHome jika sudah login.
+    console.log('🚀 Aplikasi siap dengan autentikasi!');
 </script>
 </body>
 </html>
