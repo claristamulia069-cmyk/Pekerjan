@@ -1,36 +1,31 @@
-// ================================================================
-// js/app.js - Inisialisasi Firebase, Auth, Router
-// ================================================================
+// ============================================================
+// APP.JS - Inisialisasi Firebase, Auth, Router, dan State
+// ============================================================
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
-import {
-    getAuth,
-    onAuthStateChanged,
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    sendPasswordResetEmail,
-    updatePassword
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    sendPasswordResetEmail, 
+    updatePassword 
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js';
-import {
-    getFirestore,
-    doc,
-    getDoc,
-    setDoc,
-    updateDoc,
-    collection,
-    addDoc,
-    query,
-    getDocs,
-    orderBy,
-    where,
-    deleteDoc,
-    serverTimestamp
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    setDoc, 
+    updateDoc, 
+    collection, 
+    addDoc 
 } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
 import { getStorage } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js';
+import { encryptPassword } from './utils.js';
 
-// ================================================================
+// ============================================================
 // 1. KONFIGURASI FIREBASE (GANTI DENGAN PUNYAMU)
-// ================================================================
+// ============================================================
 const firebaseConfig = {
     apiKey: "AIzaSyDummyKey_IsikanDenganPunyaSendiri",
     authDomain: "your-project.firebaseapp.com",
@@ -40,25 +35,22 @@ const firebaseConfig = {
     appId: "1:123456789:web:abcdef"
 };
 
-// ================================================================
-// 2. INISIALISASI FIREBASE
-// ================================================================
+// Inisialisasi
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// ================================================================
-// 3. VARIABEL GLOBAL
-// ================================================================
+// ============================================================
+// 2. VARIABEL GLOBAL
+// ============================================================
 export let currentUser = null;
 export let currentUserRole = null;
 export let currentUserPoints = 0;
 
 const DIVISIONS = ['acara', 'logistik', 'akademi', 'dekdok'];
 
-// Role yang diakui & label menu
-const MENU_LABEL = {
+export const MENU_LABEL = {
     superadmin: { label: '👑 Super Admin', desc: 'Testing - Full Akses' },
     ketua: { label: '👤 Ketua', desc: 'Set Deadline & Pantau' },
     bendahara: { label: '💰 Bendahara', desc: 'Input Keuangan' },
@@ -71,7 +63,7 @@ const MENU_LABEL = {
     dpl: { label: '👀 DPL Monitoring', desc: 'Pantau semua aktivitas' }
 };
 
-// Akun bawaan dengan role default (password: rahasia123)
+// Mapping email ke role default (untuk akun bawaan)
 const DEFAULT_ROLES = {
     'ketua@panitia.com': 'ketua',
     'bendahara@panitia.com': 'bendahara',
@@ -82,25 +74,12 @@ const DEFAULT_ROLES = {
     'sie_dekdok@panitia.com': 'sie_dekdok',
     'humas@panitia.com': 'humas',
     'dpl@panitia.com': 'dpl',
-    'admin@panitia.com': 'superadmin'   // akun testing
+    'admin@panitia.com': 'superadmin'   // 🔥 Super Admin
 };
 
-// ================================================================
-// 4. FUNGSI AUTH
-// ================================================================
-
-// Toggle form login / register
-export function toggleAuth(mode) {
-    if (mode === 'login') {
-        document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('registerForm').style.display = 'none';
-    } else {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('registerForm').style.display = 'block';
-    }
-}
-
-// Fungsi Login
+// ============================================================
+// 3. FUNGSI AUTH
+// ============================================================
 export async function login() {
     const email = document.getElementById('loginEmail').value.trim();
     const pass = document.getElementById('loginPassword').value;
@@ -109,12 +88,11 @@ export async function login() {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (e) {
-        // Jika akun belum ada tapi termasuk daftar akun bawaan, buat otomatis
+        // Jika akun bawaan belum dibuat, buat otomatis
         if (e.code === 'auth/user-not-found' && DEFAULT_ROLES[email]) {
             try {
                 const cred = await createUserWithEmailAndPassword(auth, email, pass);
                 const role = DEFAULT_ROLES[email];
-                // Superadmin langsung bisa login tanpa ganti password
                 const isFirstLogin = (role === 'superadmin') ? false : true;
                 await setDoc(doc(db, 'users', cred.user.uid), {
                     email: email,
@@ -122,9 +100,8 @@ export async function login() {
                     points: 0,
                     isFirstLogin: isFirstLogin,
                     canChangePassword: (role === 'superadmin') ? false : true,
-                    createdAt: serverTimestamp()
+                    createdAt: new Date()
                 });
-                // Login ulang agar state terupdate
                 await signInWithEmailAndPassword(auth, email, pass);
             } catch (err) {
                 msg.innerText = '❌ Gagal membuat akun bawaan: ' + err.message;
@@ -135,7 +112,6 @@ export async function login() {
     }
 }
 
-// Fungsi Register (untuk akun baru)
 export async function register() {
     const email = document.getElementById('registerEmail').value.trim();
     const pass = document.getElementById('registerPassword').value;
@@ -143,14 +119,13 @@ export async function register() {
     msg.innerText = '';
     try {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        // Akun baru default role 'member' dan wajib ganti password
         await setDoc(doc(db, 'users', cred.user.uid), {
             email: email,
             role: 'member',
             points: 0,
             isFirstLogin: true,
             canChangePassword: true,
-            createdAt: serverTimestamp()
+            createdAt: new Date()
         });
         msg.innerText = '✅ Akun berhasil dibuat! Silakan login.';
         document.getElementById('registerEmail').value = '';
@@ -161,12 +136,20 @@ export async function register() {
     }
 }
 
-// Logout
 export function logout() {
     auth.signOut();
 }
 
-// Reset Password (kirim email)
+export function toggleAuth(mode) {
+    if (mode === 'login') {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+    } else {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+    }
+}
+
 export async function resetPassword() {
     const email = prompt('Masukkan email Anda untuk menerima link reset password:');
     if (!email) return;
@@ -178,49 +161,9 @@ export async function resetPassword() {
     }
 }
 
-// ================================================================
-// 5. FORCE CHANGE PASSWORD (Wajib Ganti Password)
-// ================================================================
-
-async function showForceChangePasswordModal(uid) {
-    const newPass = prompt(
-        '⚠️ Anda harus mengganti password sebelum masuk.\n' +
-        'Password minimal 6 karakter.\n\n' +
-        'Masukkan password baru:'
-    );
-    if (!newPass || newPass.length < 6) {
-        alert('Password minimal 6 karakter. Silakan logout dan login kembali.');
-        auth.signOut();
-        return;
-    }
-    try {
-        // Update password di Firebase Auth
-        await updatePassword(currentUser, newPass);
-        // Simpan password terenkripsi di Firestore (supaya Ketua bisa melihat)
-        const encrypted = encryptPassword(newPass);
-        await updateDoc(doc(db, 'users', uid), {
-            passwordEncrypted: encrypted,
-            isFirstLogin: false,
-            canChangePassword: false
-        });
-        alert('✅ Password berhasil diubah! Silakan login kembali.');
-        auth.signOut();
-    } catch (e) {
-        alert('❌ Gagal mengganti password: ' + e.message);
-        auth.signOut();
-    }
-}
-
-// Enkripsi sederhana (untuk penyimpanan password agar Ketua bisa melihat)
-function encryptPassword(password) {
-    const SALT = 'rahasiaPanitia2024'; // Ganti dengan kunci rahasia
-    return btoa(password + SALT);
-}
-
-// ================================================================
-// 6. AUTH STATE OBSERVER
-// ================================================================
-
+// ============================================================
+// 4. AUTH STATE OBSERVER
+// ============================================================
 export function initApp() {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -228,18 +171,16 @@ export function initApp() {
             document.getElementById('logoutBtn').style.display = 'block';
             document.getElementById('login-page').style.display = 'none';
 
-            // Catat log login (untuk DPL)
+            // Catat log login
             try {
                 await addDoc(collection(db, 'login_logs'), {
                     uid: user.uid,
                     email: user.email,
-                    timestamp: serverTimestamp()
+                    timestamp: new Date()
                 });
-            } catch (e) {
-                console.warn('Gagal catat log login:', e);
-            }
+            } catch (e) {}
 
-            // Ambil data user dari Firestore
+            // Ambil data user
             try {
                 const docSnap = await getDoc(doc(db, 'users', user.uid));
                 if (docSnap.exists()) {
@@ -247,7 +188,7 @@ export function initApp() {
                     currentUserRole = data.role || 'member';
                     currentUserPoints = data.points || 0;
 
-                    // 🔥 SUPERADMIN: langsung masuk tanpa force change password
+                    // 🔥 Jika superadmin, langsung masuk tanpa force change password
                     if (currentUserRole === 'superadmin') {
                         showHome();
                         return;
@@ -259,14 +200,14 @@ export function initApp() {
                         return;
                     }
                 } else {
-                    // Jika dokumen belum ada (misal dibuat via console)
+                    // Jika dokumen belum ada (misal akun dibuat via console)
                     await setDoc(doc(db, 'users', user.uid), {
                         email: user.email,
                         role: 'member',
                         points: 0,
                         isFirstLogin: true,
                         canChangePassword: true,
-                        createdAt: serverTimestamp()
+                        createdAt: new Date()
                     });
                     currentUserRole = 'member';
                     currentUserPoints = 0;
@@ -274,29 +215,21 @@ export function initApp() {
                     return;
                 }
             } catch (e) {
-                console.error('❌ Gagal ambil data user:', e);
+                console.error('Gagal ambil data user:', e);
                 currentUserRole = 'member';
                 currentUserPoints = 0;
             }
-
-            // Tampilkan halaman utama
             showHome();
-
         } else {
             // User logout
             currentUser = null;
             currentUserRole = null;
             currentUserPoints = 0;
-
             document.getElementById('logoutBtn').style.display = 'none';
             document.getElementById('login-page').style.display = 'block';
-
-            // Sembunyikan semua halaman
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('page-home').classList.remove('active');
             document.getElementById('page-dynamic').classList.remove('active');
-
-            // Reset form login
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('loginMessage').innerText = '';
@@ -306,17 +239,40 @@ export function initApp() {
     });
 }
 
-// ================================================================
-// 7. HOME & NAVIGASI
-// ================================================================
+// ============================================================
+// 5. FORCE CHANGE PASSWORD MODAL
+// ============================================================
+async function showForceChangePasswordModal(uid) {
+    const newPass = prompt('⚠️ Anda harus mengganti password sebelum masuk. Masukkan password baru (min 6 karakter):');
+    if (!newPass || newPass.length < 6) {
+        alert('Password minimal 6 karakter. Silakan logout dan login kembali.');
+        auth.signOut();
+        return;
+    }
+    try {
+        await updatePassword(currentUser, newPass);
+        await updateDoc(doc(db, 'users', uid), {
+            passwordEncrypted: encryptPassword(newPass),
+            isFirstLogin: false,
+            canChangePassword: false
+        });
+        alert('✅ Password berhasil diubah! Silakan login kembali.');
+        auth.signOut();
+    } catch (e) {
+        alert('Gagal mengganti password: ' + e.message);
+        auth.signOut();
+    }
+}
 
-// Tampilkan halaman utama dengan menu sesuai role
+// ============================================================
+// 6. HOME & NAVIGASI
+// ============================================================
 export function showHome() {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-home').classList.add('active');
     document.getElementById('page-dynamic').classList.remove('active');
 
-    // Update profil
+    // Update profile
     const profile = document.getElementById('profileCard');
     if (currentUser) {
         profile.innerHTML = `
@@ -330,35 +286,22 @@ export function showHome() {
         profile.innerHTML = '';
     }
 
-    // Tampilkan menu berdasarkan role
+    // Render menu berdasarkan role
     const container = document.getElementById('menuCards');
-    const allowed = getCurrentAllowedRoles();
-
+    let allowed = getCurrentAllowedRoles();
     if (allowed.length === 0) {
-        container.innerHTML = `
-            <p style="grid-column:1/-1; text-align:center; color:#b91c1c;">
-                ❌ Role Anda (${currentUserRole}) tidak memiliki akses. Hubungi admin.
-            </p>`;
+        container.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#b91c1c;">❌ Role Anda (${currentUserRole}) tidak memiliki akses. Hubungi admin.</p>`;
         return;
     }
-
     let html = '';
     allowed.forEach(key => {
         const info = MENU_LABEL[key];
-        if (info) {
-            html += `
-                <div class="card" onclick="window.navigateTo('${key}')">
-                    <h3>${info.label}</h3>
-                    <span class="badge">${info.desc}</span>
-                </div>`;
-        }
+        if (info) html += `<div class="card" onclick="window.navigateTo('${key}')"><h3>${info.label}</h3><span class="badge">${info.desc}</span></div>`;
     });
     container.innerHTML = html;
 }
 
-// Dapatkan daftar menu yang diizinkan berdasarkan role
 function getCurrentAllowedRoles() {
-    // Superadmin dan Ketua dapat mengakses semua menu
     if (currentUserRole === 'superadmin' || currentUserRole === 'ketua') {
         return ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok', 'humas', 'dpl'];
     }
@@ -373,14 +316,15 @@ function getCurrentAllowedRoles() {
     return [];
 }
 
-// Navigasi ke halaman role tertentu
+// ============================================================
+// 7. NAVIGASI KE HALAMAN ROLE
+// ============================================================
 export function navigateTo(role) {
     const allowed = getCurrentAllowedRoles();
     if (!allowed.includes(role)) {
         alert('Anda tidak memiliki akses ke halaman ini.');
         return;
     }
-
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-home').classList.remove('active');
     document.getElementById('page-dynamic').classList.add('active');
@@ -397,14 +341,14 @@ export function navigateTo(role) {
         'dpl': '👀 Dashboard DPL'
     };
     document.getElementById('dynamic-title').innerText = titleMap[role] || role;
-
     renderPage(role);
 }
 
-// Render halaman sesuai role (lazy load modul)
+// ============================================================
+// 8. RENDER PAGE (LAZY LOAD MODUL)
+// ============================================================
 async function renderPage(role) {
     const container = document.getElementById('dynamic-content');
-
     if (role === 'ketua') {
         const { renderKetua } = await import('./roles/ketua.js');
         renderKetua(container);
@@ -428,39 +372,6 @@ async function renderPage(role) {
     }
 }
 
-// Kembali ke halaman utama
 export function goHome() {
     showHome();
 }
-
-// ================================================================
-// 8. EKSPOS FUNGSI KE WINDOW (Agar bisa dipanggil dari HTML)
-// ================================================================
-
-// Fungsi-fungsi yang dipanggil dari onclick di HTML
-window.login = login;
-window.register = register;
-window.logout = logout;
-window.toggleAuth = toggleAuth;
-window.resetPassword = resetPassword;
-window.goHome = goHome;
-window.navigateTo = navigateTo;
-
-// Fungsi-fungsi yang akan diisi oleh modul role (di-set nanti)
-window.setDeadline = null;
-window.switchKetuaTab = null;
-window.editActivity = null;
-window.exportWordToDoc = null;
-window.submitMeeting = null;
-
-console.log('🚀 Aplikasi siap! Akun bawaan:');
-console.log('  admin@panitia.com / admin123 (Super Admin - testing)');
-console.log('  ketua@panitia.com / rahasia123');
-console.log('  bendahara@panitia.com / rahasia123');
-console.log('  sekretaris@panitia.com / rahasia123');
-console.log('  sie_acara@panitia.com / rahasia123');
-console.log('  sie_logistik@panitia.com / rahasia123');
-console.log('  sie_akademi@panitia.com / rahasia123');
-console.log('  sie_dekdok@panitia.com / rahasia123');
-console.log('  humas@panitia.com / rahasia123');
-console.log('  dpl@panitia.com / rahasia123');
