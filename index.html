@@ -3,536 +3,80 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sistem Kepanitiaan - Login</title>
+    <title>Sistem Kepanitiaan</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-    <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
-        body { background: #f4f7fc; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin: 30px 0; }
-        .card { background: white; padding: 30px 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
-        .card:hover { border-color: #2563eb; transform: translateY(-4px); }
-        .card h3 { font-size: 18px; color: #1e293b; }
-        .card .badge { font-size: 12px; background: #e2e8f0; padding: 4px 12px; border-radius: 20px; margin-top: 6px; display: inline-block; }
-        .page { display: none; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-top: 20px; }
-        .page.active { display: block; }
-        .back-btn { background: #e2e8f0; border: none; padding: 8px 20px; border-radius: 30px; cursor: pointer; margin-bottom: 20px; font-weight: 600; }
-        .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #334155; }
-        .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; }
-        .form-group input[type="file"] { padding: 8px; }
-        .btn-primary { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 600; cursor: pointer; }
-        .btn-success { background: #22c55e; color: white; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 600; cursor: pointer; }
-        .btn-danger { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
-        .btn-warning { background: #f59e0b; color: white; border: none; padding: 6px 14px; border-radius: 30px; cursor: pointer; font-size: 12px; }
-        .item-card { background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #2563eb; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
-        .item-card img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
-        .item-card .late { background: #fee2e2; color: #b91c1c; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        .item-card .ontime { background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        .flex-row { display: flex; gap: 20px; flex-wrap: wrap; }
-        .stat-box { background: #f1f5f9; padding: 20px; border-radius: 12px; flex: 1; min-width: 150px; }
-        .stat-box h4 { color: #475569; }
-        .stat-box p { font-size: 28px; font-weight: 700; color: #0f172a; }
-        .tab { display: inline-block; padding: 10px 20px; background: #e2e8f0; border-radius: 30px; margin-right: 10px; cursor: pointer; font-weight: 600; }
-        .tab.active { background: #2563eb; color: white; }
-        .tab-content { display: none; margin-top: 20px; }
-        .tab-content.active { display: block; }
-        .deadline-set { background: #fef9c3; padding: 10px 16px; border-radius: 10px; margin-bottom: 16px; border: 1px solid #facc15; }
-        #login-page { max-width: 400px; margin: 60px auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
-        #login-page h2 { text-align: center; margin-bottom: 20px; }
-        .auth-toggle { text-align: center; margin-top: 15px; color: #2563eb; cursor: pointer; }
-        .logout-btn { position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: 600; z-index: 999; }
-        .ketua-stat { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .ketua-stat .stat { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-align: center; }
-        .ketua-stat .stat .number { font-size: 32px; font-weight: 700; color: #0f172a; }
-        .ketua-stat .stat .label { font-size: 14px; color: #64748b; }
-        .reset-link { color: #2563eb; cursor: pointer; margin-top: 10px; display: inline-block; }
-        .profile-card { background: #f1f5f9; padding: 15px 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
-        .profile-card .info { display: flex; gap: 20px; flex-wrap: wrap; }
-        .profile-card .info span { font-weight: 600; }
-        .profile-card .points { background: #2563eb; color: white; padding: 6px 18px; border-radius: 30px; font-weight: 700; }
-        .leaderboard-item { display: flex; justify-content: space-between; padding: 10px 15px; background: white; border-radius: 10px; margin-bottom: 6px; border-left: 4px solid #2563eb; }
-        .leaderboard-item .rank { font-weight: 700; color: #64748b; width: 30px; }
-        .leaderboard-item .name { flex: 1; }
-        .leaderboard-item .pts { font-weight: 700; color: #0f172a; }
-        .log-entry { display: flex; justify-content: space-between; padding: 6px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 4px; font-size: 14px; border-left: 3px solid #22c55e; }
-        .dpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .edit-btn { background: #f59e0b; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 12px; }
-        .btn-export { background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: 600; margin-bottom: 15px; }
-        @media (max-width: 600px) { .card-grid { grid-template-columns: 1fr 1fr; } .dpl-grid { grid-template-columns: 1fr; } }
-    </style>
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+    <!-- Logout Button -->
+    <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="window.logout()">🚪 Logout</button>
 
-<!-- LOGOUT -->
-<button class="logout-btn" id="logoutBtn" style="display:none;" onclick="logout()">🚪 Logout</button>
-
-<div class="container" id="app">
-    <!-- LOGIN -->
-    <div id="login-page">
-        <h2>🔐 Login</h2>
-        <div id="loginForm">
-            <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="email@example.com" /></div>
-            <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
-            <button class="btn-primary" onclick="login()" style="width:100%;">Masuk</button>
-            <p style="margin-top:10px; font-size:14px; color:#64748b;">Akun bawaan: <strong>ketua@panitia.com</strong> (password: rahasia123)</p>
-            <p class="auth-toggle" onclick="toggleAuth('register')">Belum punya akun? Daftar di sini</p>
-            <div id="loginMessage" style="margin-top:10px; color:#b91c1c;"></div>
-            <div id="resetMessage" style="margin-top:10px; color:#2563eb;"></div>
-            <span class="reset-link" onclick="resetPassword()">🔓 Lupa Password? Reset di sini</span>
+    <div class="container" id="app">
+        <!-- Login Page -->
+        <div id="login-page">
+            <h2>🔐 Login</h2>
+            <div id="loginForm">
+                <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="email@example.com" /></div>
+                <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
+                <button class="btn-primary" onclick="window.login()" style="width:100%;">Masuk</button>
+                <p style="margin-top:10px; font-size:14px; color:#64748b;">Akun bawaan: <strong>ketua@panitia.com</strong> (password: rahasia123)</p>
+                <p class="auth-toggle" onclick="window.toggleAuth('register')">Belum punya akun? Daftar di sini</p>
+                <div id="loginMessage" style="margin-top:10px; color:#b91c1c;"></div>
+                <div id="resetMessage" style="margin-top:10px; color:#2563eb;"></div>
+                <span class="reset-link" onclick="window.resetPassword()">🔓 Lupa Password? Reset di sini</span>
+            </div>
+            <div id="registerForm" style="display:none;">
+                <div class="form-group"><label>Email</label><input type="email" id="registerEmail" placeholder="email@example.com" /></div>
+                <div class="form-group"><label>Password</label><input type="password" id="registerPassword" placeholder="••••••••" /></div>
+                <button class="btn-primary" onclick="window.register()" style="width:100%;">Daftar</button>
+                <p class="auth-toggle" onclick="window.toggleAuth('login')">Sudah punya akun? Login</p>
+                <div id="registerMessage" style="margin-top:10px; color:#b91c1c;"></div>
+            </div>
         </div>
-        <div id="registerForm" style="display:none;">
-            <div class="form-group"><label>Email</label><input type="email" id="registerEmail" placeholder="email@example.com" /></div>
-            <div class="form-group"><label>Password</label><input type="password" id="registerPassword" placeholder="••••••••" /></div>
-            <button class="btn-primary" onclick="register()" style="width:100%;">Daftar</button>
-            <p class="auth-toggle" onclick="toggleAuth('login')">Sudah punya akun? Login</p>
-            <div id="registerMessage" style="margin-top:10px; color:#b91c1c;"></div>
+
+        <!-- Home Page -->
+        <div id="page-home" class="page">
+            <h1 style="text-align:center; margin-bottom:10px;">📋 Pilih Divisi</h1>
+            <div id="profileCard" class="profile-card"></div>
+            <div class="card-grid" id="menuCards"></div>
+            <p style="text-align:center; color:#94a3b8; font-size:14px;">⚠️ Upload melewati deadline akan tercatat sebagai <strong>Pelanggaran</strong></p>
+        </div>
+
+        <!-- Dynamic Page -->
+        <div id="page-dynamic" class="page">
+            <button class="back-btn" onclick="window.goHome()">⬅ Kembali ke Utama</button>
+            <h2 id="dynamic-title">Judul</h2>
+            <div id="dynamic-content"></div>
         </div>
     </div>
 
-    <!-- HOME -->
-    <div id="page-home" class="page">
-        <h1 style="text-align:center; margin-bottom:10px;">📋 Pilih Divisi</h1>
-        <div id="profileCard" class="profile-card"></div>
-        <div class="card-grid" id="menuCards"></div>
-        <p style="text-align:center; color:#94a3b8; font-size:14px;">⚠️ Upload melewati deadline akan tercatat sebagai <strong>Pelanggaran</strong></p>
-    </div>
+    <!-- Load Modul JavaScript -->
+    <script type="module">
+        // Import semua modul yang diperlukan
+        import { initApp, login, register, logout, toggleAuth, resetPassword, goHome, navigateTo } from './js/app.js';
+        import { renderKetua } from './js/roles/ketua.js';
+        import { renderBendahara } from './js/roles/bendahara.js';
+        import { renderSekretaris } from './js/roles/sekretaris.js';
+        import { renderSie } from './js/roles/sie.js';
+        import { renderHumas } from './js/roles/humas.js';
+        import { renderDpl } from './js/roles/dpl.js';
 
-    <!-- DYNAMIC PAGE -->
-    <div id="page-dynamic" class="page">
-        <button class="back-btn" onclick="goHome()">⬅ Kembali ke Utama</button>
-        <h2 id="dynamic-title">Judul</h2>
-        <div id="dynamic-content"></div>
-    </div>
-</div>
+        // Ekspos fungsi ke window agar bisa dipanggil dari HTML
+        window.login = login;
+        window.register = register;
+        window.logout = logout;
+        window.toggleAuth = toggleAuth;
+        window.resetPassword = resetPassword;
+        window.goHome = goHome;
+        window.navigateTo = navigateTo;
 
-<script>
-    // ================================================================
-    // 1. KONFIGURASI FIREBASE (GANTI DENGAN PUNYAMU)
-    // ================================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyDummyKey_IsikanDenganPunyaSendiri",
-        authDomain: "your-project.firebaseapp.com",
-        projectId: "your-project-id",
-        storageBucket: "your-project.appspot.com",
-        messagingSenderId: "123456789",
-        appId: "1:123456789:web:abcdef"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const storage = firebase.storage();
-
-    // ================================================================
-    // 2. VARIABEL GLOBAL
-    // ================================================================
-    let currentUser = null;
-    let currentUserRole = null;
-    let currentUserPoints = 0;
-    const DIVISIONS = ['acara', 'logistik', 'akademi', 'dekdok'];
-    const MENU_LABEL = {
-        ketua: { label: '👤 Ketua', desc: 'Set Deadline & Pantau' },
-        bendahara: { label: '💰 Bendahara', desc: 'Input Keuangan' },
-        sekretaris: { label: '📝 Sekretaris', desc: 'Logbook & Rekap' },
-        acara: { label: '🎉 Sie Acara', desc: 'Kegiatan' },
-        logistik: { label: '📦 Sie Logistik', desc: 'Kegiatan' },
-        akademi: { label: '📚 Sie Akademi', desc: 'Kegiatan' },
-        dekdok: { label: '📸 Sie Dekdok', desc: 'Kegiatan' },
-        humas: { label: '📢 Humas', desc: 'Lihat semua & dokumentasi' },
-        dpl: { label: '👀 DPL Monitoring', desc: 'Pantau semua aktivitas' }
-    };
-
-    const DEFAULT_ROLES = {
-        'ketua@panitia.com': 'ketua',
-        'bendahara@panitia.com': 'bendahara',
-        'sekretaris@panitia.com': 'sekretaris',
-        'sie_acara@panitia.com': 'sie_acara',
-        'sie_logistik@panitia.com': 'sie_logistik',
-        'sie_akademi@panitia.com': 'sie_akademi',
-        'sie_dekdok@panitia.com': 'sie_dekdok',
-        'humas@panitia.com': 'humas',
-        'dpl@panitia.com': 'dpl'
-    };
-
-    // ================================================================
-    // 3. AUTH (sama seperti sebelumnya)
-    // ================================================================
-    function toggleAuth(mode) {
-        if (mode === 'login') {
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-        } else {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-        }
-    }
-
-    async function login() {
-        const email = document.getElementById('loginEmail').value.trim();
-        const pass = document.getElementById('loginPassword').value;
-        const msg = document.getElementById('loginMessage');
-        msg.innerText = '';
-        try {
-            await auth.signInWithEmailAndPassword(email, pass);
-        } catch (e) {
-            if (e.code === 'auth/user-not-found' && DEFAULT_ROLES[email]) {
-                try {
-                    const cred = await auth.createUserWithEmailAndPassword(email, pass);
-                    const role = DEFAULT_ROLES[email];
-                    await db.collection('users').doc(cred.user.uid).set({
-                        email: email,
-                        role: role,
-                        points: 0,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    await auth.signInWithEmailAndPassword(email, pass);
-                } catch (err) {
-                    msg.innerText = '❌ Gagal membuat akun bawaan: ' + err.message;
-                }
-            } else {
-                msg.innerText = '❌ ' + e.message;
-            }
-        }
-    }
-
-    async function register() {
-        const email = document.getElementById('registerEmail').value.trim();
-        const pass = document.getElementById('registerPassword').value;
-        const msg = document.getElementById('registerMessage');
-        msg.innerText = '';
-        try {
-            const cred = await auth.createUserWithEmailAndPassword(email, pass);
-            await db.collection('users').doc(cred.user.uid).set({
-                email: email,
-                role: 'member',
-                points: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            msg.innerText = '✅ Akun berhasil dibuat! Silakan login.';
-            document.getElementById('registerEmail').value = '';
-            document.getElementById('registerPassword').value = '';
-            toggleAuth('login');
-        } catch (e) {
-            msg.innerText = '❌ ' + e.message;
-        }
-    }
-
-    function logout() {
-        auth.signOut();
-    }
-
-    async function resetPassword() {
-        const email = prompt('Masukkan email Anda untuk menerima link reset password:');
-        if (!email) return;
-        try {
-            await auth.sendPasswordResetEmail(email);
-            document.getElementById('resetMessage').innerHTML = '✅ Email reset telah dikirim. Cek kotak masuk/spam.';
-        } catch (e) {
-            alert('Gagal kirim reset: ' + e.message);
-        }
-    }
-
-    // ================================================================
-    // 4. AUTH STATE OBSERVER + LOG
-    // ================================================================
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            currentUser = user;
-            document.getElementById('logoutBtn').style.display = 'block';
-            document.getElementById('login-page').style.display = 'none';
-            try {
-                await db.collection('login_logs').add({
-                    uid: user.uid,
-                    email: user.email,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (e) {}
-            try {
-                const doc = await db.collection('users').doc(user.uid).get();
-                if (doc.exists) {
-                    currentUserRole = doc.data().role || 'member';
-                    currentUserPoints = doc.data().points || 0;
-                } else {
-                    await db.collection('users').doc(user.uid).set({
-                        email: user.email,
-                        role: 'member',
-                        points: 0,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    currentUserRole = 'member';
-                    currentUserPoints = 0;
-                }
-            } catch (e) {
-                console.error(e);
-                currentUserRole = 'member';
-                currentUserPoints = 0;
-            }
-            showHome();
-        } else {
-            currentUser = null;
-            currentUserRole = null;
-            currentUserPoints = 0;
-            document.getElementById('logoutBtn').style.display = 'none';
-            document.getElementById('login-page').style.display = 'block';
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-home').classList.remove('active');
-            document.getElementById('page-dynamic').classList.remove('active');
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('loginMessage').innerText = '';
-            document.getElementById('registerMessage').innerText = '';
-            document.getElementById('resetMessage').innerHTML = '';
-        }
-    });
-
-    // ================================================================
-    // 5. HOME & NAVIGASI
-    // ================================================================
-    function showHome() {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById('page-home').classList.add('active');
-        document.getElementById('page-dynamic').classList.remove('active');
-        const profile = document.getElementById('profileCard');
-        if (currentUser) {
-            profile.innerHTML = `
-                <div class="info">
-                    <span>📧 ${currentUser.email}</span>
-                    <span>🎯 Role: <strong>${currentUserRole}</strong></span>
-                </div>
-                <div class="points">⭐ Poin: ${currentUserPoints}</div>
-            `;
-        } else {
-            profile.innerHTML = '';
-        }
-        const container = document.getElementById('menuCards');
-        let allowed = getCurrentAllowedRoles();
-        if (allowed.length === 0) {
-            container.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#b91c1c;">❌ Role Anda (${currentUserRole}) tidak memiliki akses. Hubungi admin.</p>`;
-            return;
-        }
-        let html = '';
-        allowed.forEach(key => {
-            const info = MENU_LABEL[key];
-            if (info) html += `<div class="card" onclick="navigateTo('${key}')"><h3>${info.label}</h3><span class="badge">${info.desc}</span></div>`;
-        });
-        container.innerHTML = html;
-    }
-
-    function getCurrentAllowedRoles() {
-        if (currentUserRole === 'ketua') return ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok', 'humas', 'dpl'];
-        if (currentUserRole === 'bendahara') return ['bendahara'];
-        if (currentUserRole === 'sekretaris') return ['sekretaris'];
-        if (currentUserRole === 'sie_acara') return ['acara'];
-        if (currentUserRole === 'sie_logistik') return ['logistik'];
-        if (currentUserRole === 'sie_akademi') return ['akademi'];
-        if (currentUserRole === 'sie_dekdok') return ['dekdok'];
-        if (currentUserRole === 'humas') return ['humas'];
-        if (currentUserRole === 'dpl') return ['dpl'];
-        return [];
-    }
-
-    function navigateTo(role) {
-        const allowed = getCurrentAllowedRoles();
-        if (!allowed.includes(role)) {
-            alert('Anda tidak memiliki akses ke halaman ini.');
-            return;
-        }
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById('page-home').classList.remove('active');
-        document.getElementById('page-dynamic').classList.add('active');
-        const titleMap = {
-            'ketua': '👤 Panel Ketua',
-            'bendahara': '💰 Panel Bendahara',
-            'sekretaris': '📝 Panel Sekretaris',
-            'acara': '🎉 Sie Acara',
-            'logistik': '📦 Sie Logistik',
-            'akademi': '📚 Sie Akademi',
-            'dekdok': '📸 Sie Dekdok',
-            'humas': '📢 Panel Humas',
-            'dpl': '👀 Dashboard DPL'
-        };
-        document.getElementById('dynamic-title').innerText = titleMap[role] || role;
-        renderPage(role);
-    }
-
-    function goHome() { showHome(); }
-
-    function renderPage(role) {
-        const container = document.getElementById('dynamic-content');
-        if (role === 'ketua') renderKetua(container);
-        else if (role === 'bendahara') renderBendahara(container);
-        else if (role === 'sekretaris') renderSekretaris(container);
-        else if (DIVISIONS.includes(role)) renderSie(container, role);
-        else if (role === 'humas') renderHumas(container);
-        else if (role === 'dpl') renderDpl(container);
-        else container.innerHTML = '<p>Role tidak dikenal.</p>';
-    }
-
-    // ================================================================
-    // 6. SIE (sama)
-    // ================================================================
-    function renderSie(container, division) { /* ... (sama seperti sebelumnya) ... */ }
-    // Saya singkat karena panjang, tapi di implementasi lengkap tetap ada.
-    // Untuk keperluan jawaban, saya tulis ulang semua fungsi penting.
-
-    // ... (semua fungsi Sie, Bendahara, Ketua, Humas, DPL tetap sama) ...
-
-    // ================================================================
-    // 7. SEKRETARIS (DENGAN EDIT & CETAK WORD)
-    // ================================================================
-    function renderSekretaris(container) {
-        container.innerHTML = `
-            <h4>📝 Input Logbook / Hasil Rapat</h4>
-            <div class="form-group"><label>Judul Rapat / Kegiatan</label><input id="meetingTitle" /></div>
-            <div class="form-group"><label>Kesimpulan / Hasil</label><textarea id="meetingSummary" rows="3"></textarea></div>
-            <button class="btn-primary" onclick="submitMeeting()">Simpan Logbook</button>
-            <hr/>
-            <h4>📖 Logbook Rapat</h4>
-            <div id="meetingList">Memuat...</div>
-            <hr/>
-            <h4>📋 REKAP SEMUA KEGIATAN SIE</h4>
-            <button class="btn-export" onclick="exportWordToDoc()">📄 Cetak ke Word</button>
-            <div id="sekretarisAllActivities">Memuat semua kegiatan...</div>
-        `;
-        loadMeetings();
-        loadAllActivitiesForSekretaris();
-    }
-
-    // Fungsi untuk memuat semua kegiatan dengan tombol edit
-    async function loadAllActivitiesForSekretaris() {
-        const el = document.getElementById('sekretarisAllActivities');
-        try {
-            const snap = await db.collection('activities').orderBy('timestamp', 'desc').get();
-            if (snap.empty) { el.innerHTML = 'Belum ada kegiatan dari sie manapun.'; return; }
-            let html = '';
-            snap.forEach(doc => {
-                const d = doc.data();
-                const ts = d.timestamp?.toDate?.() || new Date();
-                const late = d.isLate ? '⚠️ TERLAMBAT' : '✅ Tepat';
-                html += `
-                    <div class="item-card" style="border-left-color:#8b5cf6;">
-                        <div style="flex:1;">
-                            <strong>[${d.division.toUpperCase()}]</strong> ${d.title}<br/>
-                            ${d.desc || ''}<br/>
-                            <small>🕒 ${ts.toLocaleString('id-ID')} | ${late}</small>
-                            ${d.imageUrl ? `<br/><a href="${d.imageUrl}" target="_blank">📷 Lihat Foto</a>` : ''}
-                        </div>
-                        <button class="edit-btn" onclick="editActivity('${doc.id}')">✏️ Edit</button>
-                    </div>
-                `;
-            });
-            el.innerHTML = html;
-        } catch(e) { el.innerHTML = 'Gagal memuat data.'; }
-    }
-
-    // Fungsi untuk edit kegiatan
-    async function editActivity(docId) {
-        if (!currentUser || currentUserRole !== 'sekretaris') {
-            alert('Hanya Sekretaris yang bisa mengedit.');
-            return;
-        }
-        try {
-            const docRef = db.collection('activities').doc(docId);
-            const docSnap = await docRef.get();
-            if (!docSnap.exists) { alert('Data tidak ditemukan.'); return; }
-            const data = docSnap.data();
-            // Prompt untuk judul dan deskripsi baru
-            const newTitle = prompt('Edit Judul:', data.title);
-            if (newTitle === null) return; // batal
-            const newDesc = prompt('Edit Deskripsi:', data.desc || '');
-            if (newDesc === null) return;
-            await docRef.update({
-                title: newTitle.trim(),
-                desc: newDesc.trim()
-            });
-            alert('✅ Kegiatan berhasil diperbarui!');
-            // Refresh daftar
-            loadAllActivitiesForSekretaris();
-        } catch (e) {
-            alert('Gagal mengedit: ' + e.message);
-        }
-    }
-
-    // Fungsi untuk cetak ke Word
-    async function exportWordToDoc() {
-        try {
-            const snap = await db.collection('activities').orderBy('timestamp', 'desc').get();
-            if (snap.empty) {
-                alert('Belum ada data untuk dicetak.');
-                return;
-            }
-            // Bangun konten HTML untuk Word
-            let rows = '';
-            let no = 1;
-            snap.forEach(doc => {
-                const d = doc.data();
-                const ts = d.timestamp?.toDate?.() || new Date();
-                const status = d.isLate ? 'TERLAMBAT' : 'TEPAT';
-                rows += `
-                    <tr>
-                        <td>${no}</td>
-                        <td>${d.division.toUpperCase()}</td>
-                        <td>${d.title}</td>
-                        <td>${d.desc || ''}</td>
-                        <td>${ts.toLocaleString('id-ID')}</td>
-                        <td>${status}</td>
-                    </tr>
-                `;
-                no++;
-            });
-
-            const style = `
-                <style>
-                    table { border-collapse: collapse; width: 100%; font-family: Arial; }
-                    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-                    th { background: #2563eb; color: white; }
-                </style>
-            `;
-            const htmlContent = `
-                <html>
-                    <head><meta charset="UTF-8">${style}</head>
-                    <body>
-                        <h2>📋 Laporan Kegiatan Panitia</h2>
-                        <p>Dicetak oleh Sekretaris pada ${new Date().toLocaleString('id-ID')}</p>
-                        <table>
-                            <thead>
-                                <tr><th>No</th><th>Divisi</th><th>Judul</th><th>Deskripsi</th><th>Tanggal</th><th>Status</th></tr>
-                            </thead>
-                            <tbody>${rows}</tbody>
-                        </table>
-                    </body>
-                </html>
-            `;
-
-            // Buat blob dan download
-            const blob = new Blob([htmlContent], { type: 'application/msword' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `Laporan_Kegiatan_${new Date().toISOString().slice(0,10)}.doc`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
-        } catch (e) {
-            alert('Gagal mencetak: ' + e.message);
-        }
-    }
-
-    // ================================================================
-    // 8. FUNGSI LAINNYA (sama)
-    // ================================================================
-    // ... (Bendahara, Ketua, Humas, DPL, helper points, deadline) ...
-    // Karena kode sangat panjang, saya hanya menampilkan bagian yang berubah.
-    // Untuk kode lengkap, silakan salin dari jawaban sebelumnya dan tambahkan fungsi edit & export di atas.
-
-    // ================================================================
-    // INISIALISASI
-    // ================================================================
-    console.log('🚀 Aplikasi siap! Sekretaris bisa edit & cetak ke Word.');
-</script>
+        // Inisialisasi aplikasi
+        initApp();
+    </script>
 </body>
 </html>
