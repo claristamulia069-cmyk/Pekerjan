@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Kepanitiaan</title>
+    <!-- Firebase SDK (v9 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background: #f4f7fc; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin: 30px 0; }
+        .card { background: white; padding: 30px 15px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; cursor: pointer; transition: 0.2s; border: 2px solid transparent; }
+        .card:hover { border-color: #2563eb; transform: translateY(-4px); }
+        .card h3 { font-size: 18px; color: #1e293b; }
+        .card .badge { font-size: 12px; background: #e2e8f0; padding: 4px 12px; border-radius: 20px; margin-top: 6px; display: inline-block; }
+        .page { display: none; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-top: 20px; }
+        .page.active { display: block; }
+        .back-btn { background: #e2e8f0; border: none; padding: 8px 20px; border-radius: 30px; cursor: pointer; margin-bottom: 20px; font-weight: 600; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #334155; }
+        .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; }
+        .form-group input[type="file"] { padding: 8px; }
+        .btn-primary { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 600; cursor: pointer; }
+        .btn-danger { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
+        .item-list { margin-top: 30px; }
+        .item-card { background: #f8fafc; padding: 16px; border-radius: 12px; margin-bottom: 12px; border-left: 6px solid #2563eb; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .item-card img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+        .item-card .late { background: #fee2e2; color: #b91c1c; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .item-card .ontime { background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .flex-row { display: flex; gap: 20px; flex-wrap: wrap; }
+        .stat-box { background: #f1f5f9; padding: 20px; border-radius: 12px; flex: 1; min-width: 150px; }
+        .stat-box h4 { color: #475569; }
+        .stat-box p { font-size: 28px; font-weight: 700; color: #0f172a; }
+        .tab { display: inline-block; padding: 10px 20px; background: #e2e8f0; border-radius: 30px; margin-right: 10px; cursor: pointer; font-weight: 600; }
+        .tab.active { background: #2563eb; color: white; }
+        .tab-content { display: none; margin-top: 20px; }
+        .tab-content.active { display: block; }
+        .deadline-set { background: #fef9c3; padding: 10px 16px; border-radius: 10px; margin-bottom: 16px; border: 1px solid #facc15; }
+        @media (max-width: 600px) { .card-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    <!-- ===================== HALAMAN UTAMA ===================== -->
+    <div id="page-home" class="page active">
+        <h1 style="text-align:center; margin-bottom:10px;">📋 Pilih Divisi</h1>
+        <p style="text-align:center; color:#64748b;">Kelompok BPH, Logistik, Akademi, Acara, Dekdok</p>
+        <div class="card-grid">
+            <div class="card" onclick="navigateTo('ketua')"><h3>👤 Ketua</h3><span class="badge">Set Deadline & Pantau</span></div>
+            <div class="card" onclick="navigateTo('bendahara')"><h3>💰 Bendahara</h3><span class="badge">Input Keuangan</span></div>
+            <div class="card" onclick="navigateTo('sekretaris')"><h3>📝 Sekretaris</h3><span class="badge">Logbook & Rekap</span></div>
+            <div class="card" onclick="navigateTo('acara')"><h3>🎉 Sie Acara</h3><span class="badge">Kegiatan</span></div>
+            <div class="card" onclick="navigateTo('logistik')"><h3>📦 Sie Logistik</h3><span class="badge">Kegiatan</span></div>
+            <div class="card" onclick="navigateTo('akademi')"><h3>📚 Sie Akademi</h3><span class="badge">Kegiatan</span></div>
+            <div class="card" onclick="navigateTo('dekdok')"><h3>📸 Sie Dekdok</h3><span class="badge">Kegiatan</span></div>
+        </div>
+        <p style="text-align:center; color:#94a3b8; font-size:14px;">⚠️ Upload melewati deadline akan tercatat sebagai <strong>Pelanggaran</strong></p>
+    </div>
+
+    <!-- ===================== TEMPLATE DINAMIS ===================== -->
+    <div id="page-dynamic" class="page">
+        <button class="back-btn" onclick="goHome()">⬅ Kembali ke Utama</button>
+        <h2 id="dynamic-title">Judul</h2>
+        <div id="dynamic-content"></div>
+    </div>
+</div>
+
+<script>
+    // ================================================================
+    // 1. KONFIGURASI FIREBASE (GANTI DENGAN PUNYAMU)
+    // ================================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyDummyKey_IsikanDenganPunyaSendiri",
+        authDomain: "your-project.firebaseapp.com",
+        projectId: "your-project-id",
+        storageBucket: "your-project.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abcdef"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // ================================================================
+    // 2. VARIABEL GLOBAL
+    // ================================================================
+    let currentDivision = ''; // 'acara', 'logistik', 'bendahara', dsb.
+    const DIVISIONS = ['acara', 'logistik', 'akademi', 'dekdok'];
+
+    // ================================================================
+    // 3. NAVIGASI
+    // ================================================================
+    function navigateTo(role) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const home = document.getElementById('page-home');
+        const dyn = document.getElementById('page-dynamic');
+        home.classList.remove('active');
+        dyn.classList.add('active');
+
+        currentDivision = role;
+        const titleMap = {
+            'ketua': '👤 Panel Ketua',
+            'bendahara': '💰 Panel Bendahara',
+            'sekretaris': '📝 Panel Sekretaris',
+            'acara': '🎉 Sie Acara',
+            'logistik': '📦 Sie Logistik',
+            'akademi': '📚 Sie Akademi',
+            'dekdok': '📸 Sie Dekdok'
+        };
+        document.getElementById('dynamic-title').innerText = titleMap[role] || role;
+
+        renderPage(role);
+    }
+
+    function goHome() {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-home').classList.add('active');
+    }
+
+    // ================================================================
+    // 4. RENDER PER HALAMAN
+    // ================================================================
+    function renderPage(role) {
+        const container = document.getElementById('dynamic-content');
+        if (role === 'ketua') renderKetua(container);
+        else if (role === 'bendahara') renderBendahara(container);
+        else if (role === 'sekretaris') renderSekretaris(container);
+        else if (DIVISIONS.includes(role)) renderSie(container, role);
+        else container.innerHTML = '<p>Role tidak dikenal.</p>';
+    }
+
+    // ---------- 4A. RENDER SIE (Acara, Logistik, Akademi, Dekdok) ----------
+    function renderSie(container, division) {
+        container.innerHTML = `
+            <div class="deadline-set" id="deadlineInfo-${division}">⏳ Memuat deadline...</div>
+            <h4>➕ Tambah Kegiatan</h4>
+            <div class="form-group"><label>Judul</label><input id="actTitle" placeholder="Nama kegiatan" /></div>
+            <div class="form-group"><label>Deskripsi</label><textarea id="actDesc" rows="2"></textarea></div>
+            <div class="form-group"><label>Foto Kegiatan</label><input type="file" id="actImage" accept="image/*" /></div>
+            <button class="btn-primary" onclick="submitActivity('${division}')">📤 Kirim Kegiatan</button>
+            <hr style="margin:30px 0;" />
+            <h4>📋 Daftar Kegiatan</h4>
+            <div id="activityList-${division}">Memuat...</div>
+        `;
+        loadDeadlineInfo(division);
+        loadActivities(division);
+    }
+
+    async function loadDeadlineInfo(division) {
+        const el = document.getElementById(`deadlineInfo-${division}`);
+        try {
+            const doc = await db.collection('deadlines').doc(division).get();
+            if (doc.exists) {
+                const data = doc.data();
+                const d = data.deadlineTime.toDate ? data.deadlineTime.toDate() : new Date(data.deadlineTime);
+                el.innerHTML = `⏰ Deadline untuk Sie ini: <strong>${d.toLocaleString('id-ID')}</strong>. Jika upload lewat waktu ini, status akan <span style="color:#b91c1c;">TERLAMBAT</span>.`;
+            } else {
+                el.innerHTML = '⚠️ Deadline belum diatur oleh Ketua.';
+            }
+        } catch (e) { el.innerHTML = 'Gagal load deadline.'; }
+    }
+
+    async function loadActivities(division) {
+        const el = document.getElementById(`activityList-${division}`);
+        try {
+            const snapshot = await db.collection('activities')
+                .where('division', '==', division)
+                .orderBy('timestamp', 'desc')
+                .get();
+            if (snapshot.empty) { el.innerHTML = 'Belum ada kegiatan.'; return; }
+            let html = '';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const ts = data.timestamp.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
+                const isLate = data.isLate || false;
+                const statusHtml = isLate ? '<span class="late">⛔ TERLAMBAT (evaluasi)</span>' : '<span class="ontime">✅ Tepat Waktu</span>';
+                html += `
+                    <div class="item-card">
+                        ${data.imageUrl ? `<img src="${data.imageUrl}" />` : '<div style="width:80px; background:#e2e8f0; border-radius:8px; text-align:center; padding:30px 0;">📷</div>'}
+                        <div style="flex:1;">
+                            <strong>${data.title}</strong><br/>
+                            <small>${data.desc || ''}</small><br/>
+                            <small>🕒 ${ts.toLocaleString('id-ID')}</small> ${statusHtml}
+                        </div>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        } catch (e) { el.innerHTML = 'Error loading data.'; }
+    }
+
+    async function submitActivity(division) {
+        const title = document.getElementById('actTitle').value.trim();
+        const desc = document.getElementById('actDesc').value.trim();
+        const fileInput = document.getElementById('actImage');
+        if (!title) { alert('Judul wajib diisi!'); return; }
+
+        // Cek deadline
+        let isLate = false;
+        try {
+            const doc = await db.collection('deadlines').doc(division).get();
+            if (doc.exists) {
+                const deadline = doc.data().deadlineTime.toDate ? doc.data().deadlineTime.toDate() : new Date(doc.data().deadlineTime);
+                if (new Date() > deadline) isLate = true;
+            }
+        } catch (e) {}
+
+        let imageUrl = '';
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const path = `activities/${division}/${Date.now()}_${file.name}`;
+            const uploadTask = storage.ref(path).put(file);
+            await uploadTask;
+            imageUrl = await storage.ref(path).getDownloadURL();
+        }
+
+        await db.collection('activities').add({
+            division: division,
+            title: title,
+            desc: desc,
+            imageUrl: imageUrl,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            isLate: isLate
+        });
+
+        alert('Kegiatan berhasil ditambahkan! ' + (isLate ? '⚠️ TERLAMBAT! Dievaluasi.' : '✅ Tepat waktu.'));
+        document.getElementById('actTitle').value = '';
+        document.getElementById('actDesc').value = '';
+        document.getElementById('actImage').value = '';
+        loadActivities(division);
+    }
+
+    // ---------- 4B. RENDER BENDAHARA ----------
+    function renderBendahara(container) {
+        container.innerHTML = `
+            <div class="flex-row">
+                <div class="stat-box"><h4>💵 Total Pemasukan</h4><p id="totalIncome">Rp 0</p></div>
+                <div class="stat-box"><h4>💸 Total Pengeluaran</h4><p id="totalExpense">Rp 0</p></div>
+                <div class="stat-box"><h4>💰 Saldo</h4><p id="totalBalance">Rp 0</p></div>
+            </div>
+            <hr/>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                <span class="tab active" onclick="switchFinanceTab('income', this)">➕ Pemasukan</span>
+                <span class="tab" onclick="switchFinanceTab('expense', this)">➖ Pengeluaran + Nota</span>
+            </div>
+            <div id="financeForm">
+                <div class="form-group"><label>Deskripsi</label><input id="finDesc" placeholder="Keterangan" /></div>
+                <div class="form-group"><label>Jumlah (Rp)</label><input id="finAmount" type="number" placeholder="0" /></div>
+                <div id="receiptField" style="display:none;"><div class="form-group"><label>Foto Nota</label><input type="file" id="finReceipt" accept="image/*" /></div></div>
+                <button class="btn-primary" onclick="submitFinance('income')">Tambah Pemasukan</button>
+                <button class="btn-primary" onclick="submitFinance('expense')" style="background:#dc2626;">Tambah Pengeluaran</button>
+            </div>
+            <hr/>
+            <h4>📜 Riwayat Keuangan</h4>
+            <div id="financeList">Memuat...</div>
+        `;
+        loadFinances();
+    }
+
+    let currentFinanceType = 'income';
+    function switchFinanceTab(type, el) {
+        currentFinanceType = type;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('receiptField').style.display = (type === 'expense') ? 'block' : 'none';
+        // Ubah tombol utama
+        const btns = document.querySelectorAll('#financeForm .btn-primary');
+        btns.forEach(b => b.style.display = 'none');
+        if (type === 'income') document.querySelector('#financeForm .btn-primary:first-of-type').style.display = 'inline-block';
+        else document.querySelector('#financeForm .btn-primary:last-of-type').style.display = 'inline-block';
+    }
+
+    async function submitFinance(type) {
+        const desc = document.getElementById('finDesc').value.trim();
+        const amount = parseInt(document.getElementById('finAmount').value);
+        if (!desc || isNaN(amount) || amount <= 0) { alert('Isi deskripsi dan jumlah dengan benar!'); return; }
+
+        let receiptUrl = '';
+        if (type === 'expense') {
+            const file = document.getElementById('finReceipt').files[0];
+            if (!file) { alert('Upload foto nota untuk pengeluaran!'); return; }
+            const path = `receipts/${Date.now()}_${file.name}`;
+            await storage.ref(path).put(file);
+            receiptUrl = await storage.ref(path).getDownloadURL();
+        }
+
+        await db.collection('finances').add({
+            type: type,
+            desc: desc,
+            amount: amount,
+            receiptUrl: receiptUrl,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alert('Data keuangan berhasil!');
+        document.getElementById('finDesc').value = '';
+        document.getElementById('finAmount').value = '';
+        document.getElementById('finReceipt').value = '';
+        loadFinances();
+    }
+
+    async function loadFinances() {
+        const snap = await db.collection('finances').orderBy('timestamp', 'desc').get();
+        let totalIncome = 0, totalExpense = 0;
+        let html = '';
+        snap.forEach(doc => {
+            const d = doc.data();
+            const ts = d.timestamp?.toDate?.() || new Date();
+            if (d.type === 'income') totalIncome += d.amount;
+            else totalExpense += d.amount;
+
+            html += `
+                <div class="item-card" style="border-left-color: ${d.type==='income'?'#22c55e':'#ef4444'};">
+                    <div><strong>${d.type === 'income' ? '📈' : '📉'} ${d.desc}</strong><br/>
+                    Rp ${d.amount.toLocaleString()} - ${d.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}<br/>
+                    <small>${ts.toLocaleString('id-ID')}</small>
+                    ${d.receiptUrl ? `<br/><a href="${d.receiptUrl}" target="_blank">📎 Lihat Nota</a>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+        document.getElementById('totalIncome').innerText = `Rp ${totalIncome.toLocaleString()}`;
+        document.getElementById('totalExpense').innerText = `Rp ${totalExpense.toLocaleString()}`;
+        document.getElementById('totalBalance').innerText = `Rp ${(totalIncome - totalExpense).toLocaleString()}`;
+        document.getElementById('financeList').innerHTML = html || 'Belum ada transaksi.';
+    }
+
+    // ---------- 4C. RENDER SEKRETARIS ----------
+    function renderSekretaris(container) {
+        container.innerHTML = `
+            <h4>📝 Input Logbook / Hasil Rapat</h4>
+            <div class="form-group"><label>Judul Rapat / Kegiatan</label><input id="meetingTitle" /></div>
+            <div class="form-group"><label>Kesimpulan / Hasil</label><textarea id="meetingSummary" rows="3"></textarea></div>
+            <button class="btn-primary" onclick="submitMeeting()">Simpan Logbook</button>
+            <hr/>
+            <h4>📖 Logbook Rapat</h4>
+            <div id="meetingList">Memuat...</div>
+            <hr/>
+            <h4>📋 REKAP SEMUA KEGIATAN SIE (Untuk Bahan Laporan)</h4>
+            <div id="sekretarisAllActivities">Memuat semua kegiatan...</div>
+        `;
+        loadMeetings();
+        loadAllActivitiesForSekretaris();
+    }
+
+    async function submitMeeting() {
+        const title = document.getElementById('meetingTitle').value.trim();
+        const summary = document.getElementById('meetingSummary').value.trim();
+        if (!title || !summary) { alert('Isi judul dan kesimpulan!'); return; }
+        await db.collection('meetings').add({
+            title: title,
+            summary: summary,
+            date: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert('Logbook tersimpan!');
+        document.getElementById('meetingTitle').value = '';
+        document.getElementById('meetingSummary').value = '';
+        loadMeetings();
+    }
+
+    async function loadMeetings() {
+        const snap = await db.collection('meetings').orderBy('date', 'desc').get();
+        let html = '';
+        snap.forEach(doc => {
+            const d = doc.data();
+            const ts = d.date?.toDate?.() || new Date();
+            html += `<div class="item-card"><strong>${d.title}</strong><br/>${d.summary}<br/><small>${ts.toLocaleString('id-ID')}</small></div>`;
+        });
+        document.getElementById('meetingList').innerHTML = html || 'Belum ada logbook.';
+    }
+
+    async function loadAllActivitiesForSekretaris() {
+        const el = document.getElementById('sekretarisAllActivities');
+        try {
+            const snap = await db.collection('activities').orderBy('timestamp', 'desc').get();
+            if (snap.empty) { el.innerHTML = 'Belum ada kegiatan dari sie manapun.'; return; }
+            let html = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const ts = d.timestamp?.toDate?.() || new Date();
+                const late = d.isLate ? '⚠️ TERLAMBAT' : '✅ Tepat';
+                html += `
+                    <div class="item-card" style="border-left-color:#8b5cf6;">
+                        <div><strong>[${d.division.toUpperCase()}]</strong> ${d.title}<br/>
+                        ${d.desc || ''}<br/>
+                        <small>🕒 ${ts.toLocaleString('id-ID')} | ${late}</small>
+                        ${d.imageUrl ? `<br/><a href="${d.imageUrl}" target="_blank">📷 Lihat Foto</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        } catch(e) { el.innerHTML = 'Gagal memuat data.'; }
+    }
+
+    // ---------- 4D. RENDER KETUA ----------
+    function renderKetua(container) {
+        container.innerHTML = `
+            <h4>⏰ Atur Deadline per Sie</h4>
+            <div class="flex-row">
+                ${DIVISIONS.map(d => `
+                    <div style="background:#f1f5f9; padding:15px; border-radius:12px; flex:1; min-width:150px;">
+                        <strong>${d.toUpperCase()}</strong>
+                        <input type="datetime-local" id="deadline_${d}" style="width:100%; margin:8px 0; padding:6px;" />
+                        <button class="btn-primary" style="padding:6px 12px; font-size:12px;" onclick="setDeadline('${d}')">Set</button>
+                        <div id="statusDeadline_${d}" style="font-size:12px; margin-top:4px;"></div>
+                    </div>
+                `).join('')}
+            </div>
+            <hr/>
+            <h4>📊 Pantau Semua Kegiatan (Cek Pelanggaran)</h4>
+            <div id="ketuaAllActivities">Memuat...</div>
+        `;
+        loadAllActivitiesForKetua();
+        DIVISIONS.forEach(d => loadCurrentDeadline(d));
+    }
+
+    async function setDeadline(division) {
+        const val = document.getElementById(`deadline_${division}`).value;
+        if (!val) { alert('Pilih tanggal dan jam!'); return; }
+        const dateObj = new Date(val);
+        await db.collection('deadlines').doc(division).set({ deadlineTime: dateObj });
+        alert(`Deadline ${division} diset ke ${dateObj.toLocaleString('id-ID')}`);
+        loadCurrentDeadline(division);
+    }
+
+    async function loadCurrentDeadline(division) {
+        const el = document.getElementById(`statusDeadline_${division}`);
+        try {
+            const doc = await db.collection('deadlines').doc(division).get();
+            if (doc.exists) {
+                const d = doc.data().deadlineTime.toDate ? doc.data().deadlineTime.toDate() : new Date(doc.data().deadlineTime);
+                el.innerHTML = `🕒 ${d.toLocaleString('id-ID')}`;
+            } else el.innerHTML = 'Belum diatur';
+        } catch(e) { el.innerHTML = 'Error'; }
+    }
+
+    async function loadAllActivitiesForKetua() {
+        const el = document.getElementById('ketuaAllActivities');
+        try {
+            const snap = await db.collection('activities').orderBy('timestamp', 'desc').get();
+            if (snap.empty) { el.innerHTML = 'Belum ada kegiatan.'; return; }
+            let html = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const ts = d.timestamp?.toDate?.() || new Date();
+                const late = d.isLate ? '🔴 TERLAMBAT (Evaluasi)' : '🟢 Tepat Waktu';
+                html += `
+                    <div class="item-card" style="border-left-color: ${d.isLate ? '#ef4444' : '#22c55e'};">
+                        <div><strong>[${d.division.toUpperCase()}]</strong> ${d.title}<br/>
+                        ${d.desc || ''}<br/>
+                        <small>🕒 ${ts.toLocaleString('id-ID')} | ${late}</small>
+                        ${d.imageUrl ? `<br/><a href="${d.imageUrl}" target="_blank">📷 Lihat Foto</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        } catch(e) { el.innerHTML = 'Gagal memuat.'; }
+    }
+
+    // ================================================================
+    // 5. INISIALISASI
+    // ================================================================
+    // Tampilkan home di awal
+    document.addEventListener('DOMContentLoaded', () => {
+        // Set default tab bendahara
+        if (document.querySelector('#financeForm .btn-primary')) {
+            document.querySelector('#financeForm .btn-primary:first-of-type').style.display = 'inline-block';
+            document.querySelector('#financeForm .btn-primary:last-of-type').style.display = 'none';
+        }
+    });
+
+    console.log('🚀 Aplikasi siap! Jangan lupa ganti firebaseConfig.');
+</script>
+</body>
+</html>
