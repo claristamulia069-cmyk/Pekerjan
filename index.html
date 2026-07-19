@@ -45,16 +45,20 @@
         #login-page h2 { text-align: center; margin-bottom: 20px; }
         .auth-toggle { text-align: center; margin-top: 15px; color: #2563eb; cursor: pointer; }
         .logout-btn { position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: 600; z-index: 999; }
+        .ketua-stat { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .ketua-stat .stat { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-align: center; }
+        .ketua-stat .stat .number { font-size: 32px; font-weight: 700; color: #0f172a; }
+        .ketua-stat .stat .label { font-size: 14px; color: #64748b; }
         @media (max-width: 600px) { .card-grid { grid-template-columns: 1fr 1fr; } }
     </style>
 </head>
 <body>
 
-<!-- ===================== LOGOUT ===================== -->
+<!-- LOGOUT -->
 <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="logout()">🚪 Logout</button>
 
 <div class="container" id="app">
-    <!-- ===================== HALAMAN LOGIN ===================== -->
+    <!-- LOGIN -->
     <div id="login-page">
         <h2>🔐 Login</h2>
         <div id="loginForm">
@@ -73,7 +77,7 @@
         </div>
     </div>
 
-    <!-- ===================== HALAMAN UTAMA (setelah login) ===================== -->
+    <!-- HOME -->
     <div id="page-home" class="page">
         <h1 style="text-align:center; margin-bottom:10px;">📋 Pilih Divisi</h1>
         <p style="text-align:center; color:#64748b;" id="welcomeUser">Selamat datang, User</p>
@@ -81,7 +85,7 @@
         <p style="text-align:center; color:#94a3b8; font-size:14px;">⚠️ Upload melewati deadline akan tercatat sebagai <strong>Pelanggaran</strong></p>
     </div>
 
-    <!-- ===================== HALAMAN DINAMIS ===================== -->
+    <!-- DYNAMIC PAGE -->
     <div id="page-dynamic" class="page">
         <button class="back-btn" onclick="goHome()">⬅ Kembali ke Utama</button>
         <h2 id="dynamic-title">Judul</h2>
@@ -109,19 +113,9 @@
     // ================================================================
     // 2. VARIABEL GLOBAL
     // ================================================================
-    let currentUser = null;       // user object dari Firebase
-    let currentUserRole = null;   // role dari Firestore
+    let currentUser = null;
+    let currentUserRole = null;
     const DIVISIONS = ['acara', 'logistik', 'akademi', 'dekdok'];
-    const ROLE_MENU = {
-        ketua: ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok'],
-        bendahara: ['bendahara'],
-        sekretaris: ['sekretaris'],
-        sie_acara: ['acara'],
-        sie_logistik: ['logistik'],
-        sie_akademi: ['akademi'],
-        sie_dekdok: ['dekdok']
-    };
-    // Mapping role ke label yang ditampilkan
     const MENU_LABEL = {
         ketua: { label: '👤 Ketua', desc: 'Set Deadline & Pantau' },
         bendahara: { label: '💰 Bendahara', desc: 'Input Keuangan' },
@@ -133,7 +127,7 @@
     };
 
     // ================================================================
-    // 3. AUTHENTICATION
+    // 3. AUTH
     // ================================================================
     function toggleAuth(mode) {
         if (mode === 'login') {
@@ -151,8 +145,7 @@
         const msg = document.getElementById('loginMessage');
         msg.innerText = '';
         try {
-            const cred = await auth.signInWithEmailAndPassword(email, pass);
-            // User berhasil login, akan diproses oleh observer
+            await auth.signInWithEmailAndPassword(email, pass);
         } catch (e) {
             msg.innerText = '❌ ' + e.message;
         }
@@ -165,14 +158,12 @@
         msg.innerText = '';
         try {
             const cred = await auth.createUserWithEmailAndPassword(email, pass);
-            // Setelah register, buat dokumen user dengan role default 'member'
             await db.collection('users').doc(cred.user.uid).set({
                 email: email,
-                role: 'member',   // default, nanti diubah manual di Firestore
+                role: 'member',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             msg.innerText = '✅ Akun berhasil dibuat! Silakan login.';
-            // Kosongkan form
             document.getElementById('registerEmail').value = '';
             document.getElementById('registerPassword').value = '';
             toggleAuth('login');
@@ -186,20 +177,18 @@
     }
 
     // ================================================================
-    // 4. OBSERVER AUTH STATE
+    // 4. AUTH STATE OBSERVER
     // ================================================================
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             currentUser = user;
             document.getElementById('logoutBtn').style.display = 'block';
             document.getElementById('login-page').style.display = 'none';
-            // Ambil role dari Firestore
             try {
                 const doc = await db.collection('users').doc(user.uid).get();
                 if (doc.exists) {
                     currentUserRole = doc.data().role || 'member';
                 } else {
-                    // Jika dokumen belum ada, buat dengan role member
                     await db.collection('users').doc(user.uid).set({
                         email: user.email,
                         role: 'member',
@@ -211,7 +200,6 @@
                 console.error('Gagal ambil role:', e);
                 currentUserRole = 'member';
             }
-            // Tampilkan home
             showHome();
         } else {
             currentUser = null;
@@ -221,7 +209,6 @@
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('page-home').classList.remove('active');
             document.getElementById('page-dynamic').classList.remove('active');
-            // Reset form login
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('registerForm').style.display = 'none';
             document.getElementById('loginMessage').innerText = '';
@@ -230,7 +217,7 @@
     });
 
     // ================================================================
-    // 5. MENU UTAMA (berdasarkan role)
+    // 5. HOME & NAVIGASI
     // ================================================================
     function showHome() {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -242,44 +229,31 @@
         else welcome.innerText = '';
 
         const container = document.getElementById('menuCards');
-        let allowed = [];
-        if (currentUserRole === 'ketua') {
-            allowed = ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok'];
-        } else if (currentUserRole === 'bendahara') {
-            allowed = ['bendahara'];
-        } else if (currentUserRole === 'sekretaris') {
-            allowed = ['sekretaris'];
-        } else if (currentUserRole === 'sie_acara') {
-            allowed = ['acara'];
-        } else if (currentUserRole === 'sie_logistik') {
-            allowed = ['logistik'];
-        } else if (currentUserRole === 'sie_akademi') {
-            allowed = ['akademi'];
-        } else if (currentUserRole === 'sie_dekdok') {
-            allowed = ['dekdok'];
-        } else {
-            allowed = [];
-        }
-
+        let allowed = getCurrentAllowedRoles();
         if (allowed.length === 0) {
-            container.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#b91c1c;">❌ Role Anda (${currentUserRole}) tidak memiliki akses ke menu apapun. Hubungi admin.</p>`;
+            container.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#b91c1c;">❌ Role Anda (${currentUserRole}) tidak memiliki akses. Hubungi admin.</p>`;
             return;
         }
-
         let html = '';
         allowed.forEach(key => {
             const info = MENU_LABEL[key];
-            if (!info) return;
-            html += `<div class="card" onclick="navigateTo('${key}')"><h3>${info.label}</h3><span class="badge">${info.desc}</span></div>`;
+            if (info) html += `<div class="card" onclick="navigateTo('${key}')"><h3>${info.label}</h3><span class="badge">${info.desc}</span></div>`;
         });
         container.innerHTML = html;
     }
 
-    // ================================================================
-    // 6. NAVIGASI & CEK AKSES
-    // ================================================================
+    function getCurrentAllowedRoles() {
+        if (currentUserRole === 'ketua') return ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok'];
+        if (currentUserRole === 'bendahara') return ['bendahara'];
+        if (currentUserRole === 'sekretaris') return ['sekretaris'];
+        if (currentUserRole === 'sie_acara') return ['acara'];
+        if (currentUserRole === 'sie_logistik') return ['logistik'];
+        if (currentUserRole === 'sie_akademi') return ['akademi'];
+        if (currentUserRole === 'sie_dekdok') return ['dekdok'];
+        return [];
+    }
+
     function navigateTo(role) {
-        // Cek apakah role diizinkan untuk user saat ini
         const allowed = getCurrentAllowedRoles();
         if (!allowed.includes(role)) {
             alert('Anda tidak memiliki akses ke halaman ini.');
@@ -302,23 +276,10 @@
         renderPage(role);
     }
 
-    function getCurrentAllowedRoles() {
-        if (currentUserRole === 'ketua') return ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok'];
-        if (currentUserRole === 'bendahara') return ['bendahara'];
-        if (currentUserRole === 'sekretaris') return ['sekretaris'];
-        if (currentUserRole === 'sie_acara') return ['acara'];
-        if (currentUserRole === 'sie_logistik') return ['logistik'];
-        if (currentUserRole === 'sie_akademi') return ['akademi'];
-        if (currentUserRole === 'sie_dekdok') return ['dekdok'];
-        return [];
-    }
-
-    function goHome() {
-        showHome();
-    }
+    function goHome() { showHome(); }
 
     // ================================================================
-    // 7. RENDER HALAMAN (sama seperti sebelumnya, tapi dengan pengecekan)
+    // 6. RENDER PAGE
     // ================================================================
     function renderPage(role) {
         const container = document.getElementById('dynamic-content');
@@ -329,7 +290,9 @@
         else container.innerHTML = '<p>Role tidak dikenal.</p>';
     }
 
-    // ---------- 7A. RENDER SIE ----------
+    // ================================================================
+    // 7. FUNGSI UNTUK SIE
+    // ================================================================
     function renderSie(container, division) {
         container.innerHTML = `
             <div class="deadline-set" id="deadlineInfo-${division}">⏳ Memuat deadline...</div>
@@ -353,7 +316,7 @@
             if (doc.exists) {
                 const data = doc.data();
                 const d = data.deadlineTime.toDate ? data.deadlineTime.toDate() : new Date(data.deadlineTime);
-                el.innerHTML = `⏰ Deadline untuk Sie ini: <strong>${d.toLocaleString('id-ID')}</strong>. Jika upload lewat waktu ini, status akan <span style="color:#b91c1c;">TERLAMBAT</span>.`;
+                el.innerHTML = `⏰ Deadline: <strong>${d.toLocaleString('id-ID')}</strong>. Upload lewat waktu akan <span style="color:#b91c1c;">TERLAMBAT</span>.`;
             } else {
                 el.innerHTML = '⚠️ Deadline belum diatur oleh Ketua.';
             }
@@ -408,8 +371,7 @@
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
             const path = `activities/${division}/${Date.now()}_${file.name}`;
-            const uploadTask = storage.ref(path).put(file);
-            await uploadTask;
+            await storage.ref(path).put(file);
             imageUrl = await storage.ref(path).getDownloadURL();
         }
 
@@ -422,14 +384,16 @@
             isLate: isLate
         });
 
-        alert('Kegiatan berhasil ditambahkan! ' + (isLate ? '⚠️ TERLAMBAT! Dievaluasi.' : '✅ Tepat waktu.'));
+        alert('Kegiatan berhasil! ' + (isLate ? '⚠️ TERLAMBAT! Dievaluasi.' : '✅ Tepat waktu.'));
         document.getElementById('actTitle').value = '';
         document.getElementById('actDesc').value = '';
         document.getElementById('actImage').value = '';
         loadActivities(division);
     }
 
-    // ---------- 7B. RENDER BENDAHARA ----------
+    // ================================================================
+    // 8. BENDAHARA
+    // ================================================================
     function renderBendahara(container) {
         container.innerHTML = `
             <div class="flex-row">
@@ -523,7 +487,9 @@
         document.getElementById('financeList').innerHTML = html || 'Belum ada transaksi.';
     }
 
-    // ---------- 7C. RENDER SEKRETARIS ----------
+    // ================================================================
+    // 9. SEKRETARIS
+    // ================================================================
     function renderSekretaris(container) {
         container.innerHTML = `
             <h4>📝 Input Logbook / Hasil Rapat</h4>
@@ -534,7 +500,7 @@
             <h4>📖 Logbook Rapat</h4>
             <div id="meetingList">Memuat...</div>
             <hr/>
-            <h4>📋 REKAP SEMUA KEGIATAN SIE (Untuk Bahan Laporan)</h4>
+            <h4>📋 REKAP SEMUA KEGIATAN SIE</h4>
             <div id="sekretarisAllActivities">Memuat semua kegiatan...</div>
         `;
         loadMeetings();
@@ -591,7 +557,9 @@
         } catch(e) { el.innerHTML = 'Gagal memuat data.'; }
     }
 
-    // ---------- 7D. RENDER KETUA ----------
+    // ================================================================
+    // 10. KETUA (DENGAN LIHAT SEMUA AKTIVITAS SIE + BPH) ⭐ NEW
+    // ================================================================
     function renderKetua(container) {
         container.innerHTML = `
             <h4>⏰ Atur Deadline per Sie</h4>
@@ -606,13 +574,143 @@
                 `).join('')}
             </div>
             <hr/>
-            <h4>📊 Pantau Semua Kegiatan (Cek Pelanggaran)</h4>
-            <div id="ketuaAllActivities">Memuat...</div>
+
+            <!-- STATISTIK RINGKAS -->
+            <div class="ketua-stat" id="ketuaStats">
+                <div class="stat"><div class="number" id="statActivities">0</div><div class="label">📋 Total Kegiatan</div></div>
+                <div class="stat"><div class="number" id="statIncome">Rp 0</div><div class="label">💰 Total Pemasukan</div></div>
+                <div class="stat"><div class="number" id="statExpense">Rp 0</div><div class="label">💸 Total Pengeluaran</div></div>
+                <div class="stat"><div class="number" id="statMeetings">0</div><div class="label">📝 Total Rapat</div></div>
+            </div>
+
+            <!-- TAB UNTUK LIHAT SEMUA AKTIVITAS -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+                <span class="tab active" onclick="switchKetuaTab('activities', this)">📋 Kegiatan Sie</span>
+                <span class="tab" onclick="switchKetuaTab('finances', this)">💰 Keuangan</span>
+                <span class="tab" onclick="switchKetuaTab('meetings', this)">📝 Logbook Rapat</span>
+            </div>
+            <div id="ketuaTabContent">
+                <div id="ketuaTabActivities" class="tab-content active">Memuat kegiatan...</div>
+                <div id="ketuaTabFinances" class="tab-content">Memuat keuangan...</div>
+                <div id="ketuaTabMeetings" class="tab-content">Memuat logbook...</div>
+            </div>
         `;
-        loadAllActivitiesForKetua();
+        // Load semua data
         DIVISIONS.forEach(d => loadCurrentDeadline(d));
+        loadKetuaStats();
+        loadKetuaActivities();
+        loadKetuaFinances();
+        loadKetuaMeetings();
     }
 
+    // Fungsi untuk switch tab Ketua
+    function switchKetuaTab(tab, el) {
+        document.querySelectorAll('#ketuaTabContent .tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('#ketuaTabContent .tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById(`ketuaTab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+    }
+
+    // Statistik ringkas
+    async function loadKetuaStats() {
+        try {
+            // Jumlah kegiatan
+            const actSnap = await db.collection('activities').get();
+            document.getElementById('statActivities').innerText = actSnap.size;
+
+            // Total pemasukan & pengeluaran
+            const finSnap = await db.collection('finances').get();
+            let totalIncome = 0, totalExpense = 0;
+            finSnap.forEach(doc => {
+                const d = doc.data();
+                if (d.type === 'income') totalIncome += d.amount;
+                else totalExpense += d.amount;
+            });
+            document.getElementById('statIncome').innerText = `Rp ${totalIncome.toLocaleString()}`;
+            document.getElementById('statExpense').innerText = `Rp ${totalExpense.toLocaleString()}`;
+
+            // Jumlah rapat
+            const meetSnap = await db.collection('meetings').get();
+            document.getElementById('statMeetings').innerText = meetSnap.size;
+
+        } catch(e) { console.error('Gagal load stats:', e); }
+    }
+
+    // Kegiatan Sie
+    async function loadKetuaActivities() {
+        const el = document.getElementById('ketuaTabActivities');
+        try {
+            const snap = await db.collection('activities').orderBy('timestamp', 'desc').get();
+            if (snap.empty) { el.innerHTML = 'Belum ada kegiatan dari sie mana pun.'; return; }
+            let html = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const ts = d.timestamp?.toDate?.() || new Date();
+                const late = d.isLate ? '🔴 TERLAMBAT (Evaluasi)' : '🟢 Tepat Waktu';
+                html += `
+                    <div class="item-card" style="border-left-color: ${d.isLate ? '#ef4444' : '#22c55e'};">
+                        <div><strong>[${d.division.toUpperCase()}]</strong> ${d.title}<br/>
+                        ${d.desc || ''}<br/>
+                        <small>🕒 ${ts.toLocaleString('id-ID')} | ${late}</small>
+                        ${d.imageUrl ? `<br/><a href="${d.imageUrl}" target="_blank">📷 Lihat Foto</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        } catch(e) { el.innerHTML = 'Gagal memuat kegiatan.'; }
+    }
+
+    // Keuangan (dari Bendahara)
+    async function loadKetuaFinances() {
+        const el = document.getElementById('ketuaTabFinances');
+        try {
+            const snap = await db.collection('finances').orderBy('timestamp', 'desc').get();
+            if (snap.empty) { el.innerHTML = 'Belum ada transaksi keuangan.'; return; }
+            let html = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const ts = d.timestamp?.toDate?.() || new Date();
+                const typeLabel = d.type === 'income' ? '📈 Pemasukan' : '📉 Pengeluaran';
+                const color = d.type === 'income' ? '#22c55e' : '#ef4444';
+                html += `
+                    <div class="item-card" style="border-left-color: ${color};">
+                        <div><strong>${typeLabel}</strong> ${d.desc}<br/>
+                        Rp ${d.amount.toLocaleString()}<br/>
+                        <small>${ts.toLocaleString('id-ID')}</small>
+                        ${d.receiptUrl ? `<br/><a href="${d.receiptUrl}" target="_blank">📎 Lihat Nota</a>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        } catch(e) { el.innerHTML = 'Gagal memuat keuangan.'; }
+    }
+
+    // Logbook Rapat (dari Sekretaris)
+    async function loadKetuaMeetings() {
+        const el = document.getElementById('ketuaTabMeetings');
+        try {
+            const snap = await db.collection('meetings').orderBy('date', 'desc').get();
+            if (snap.empty) { el.innerHTML = 'Belum ada logbook rapat.'; return; }
+            let html = '';
+            snap.forEach(doc => {
+                const d = doc.data();
+                const ts = d.date?.toDate?.() || new Date();
+                html += `
+                    <div class="item-card" style="border-left-color: #8b5cf6;">
+                        <div><strong>${d.title}</strong><br/>
+                        ${d.summary}<br/>
+                        <small>🕒 ${ts.toLocaleString('id-ID')}</small>
+                        </div>
+                    </div>
+                `;
+            });
+            el.innerHTML = html;
+        } catch(e) { el.innerHTML = 'Gagal memuat logbook.'; }
+    }
+
+    // Deadline (tetap sama)
     async function setDeadline(division) {
         const val = document.getElementById(`deadline_${division}`).value;
         if (!val) { alert('Pilih tanggal dan jam!'); return; }
@@ -633,36 +731,10 @@
         } catch(e) { el.innerHTML = 'Error'; }
     }
 
-    async function loadAllActivitiesForKetua() {
-        const el = document.getElementById('ketuaAllActivities');
-        try {
-            const snap = await db.collection('activities').orderBy('timestamp', 'desc').get();
-            if (snap.empty) { el.innerHTML = 'Belum ada kegiatan.'; return; }
-            let html = '';
-            snap.forEach(doc => {
-                const d = doc.data();
-                const ts = d.timestamp?.toDate?.() || new Date();
-                const late = d.isLate ? '🔴 TERLAMBAT (Evaluasi)' : '🟢 Tepat Waktu';
-                html += `
-                    <div class="item-card" style="border-left-color: ${d.isLate ? '#ef4444' : '#22c55e'};">
-                        <div><strong>[${d.division.toUpperCase()}]</strong> ${d.title}<br/>
-                        ${d.desc || ''}<br/>
-                        <small>🕒 ${ts.toLocaleString('id-ID')} | ${late}</small>
-                        ${d.imageUrl ? `<br/><a href="${d.imageUrl}" target="_blank">📷 Lihat Foto</a>` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-            el.innerHTML = html;
-        } catch(e) { el.innerHTML = 'Gagal memuat.'; }
-    }
-
     // ================================================================
-    // 8. INISIALISASI
+    // 11. INISIALISASI
     // ================================================================
-    // Halaman login tampil pertama (auth state akan menentukan)
-    // Saat refresh, observer akan menjalankan showHome jika sudah login.
-    console.log('🚀 Aplikasi siap dengan autentikasi!');
+    console.log('🚀 Aplikasi siap dengan autentikasi & dashboard Ketua terintegrasi!');
 </script>
 </body>
 </html>
