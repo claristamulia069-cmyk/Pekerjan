@@ -25,6 +25,7 @@
                 <div class="form-group"><label>Password</label><input type="password" id="loginPassword" placeholder="••••••••" /></div>
                 <button class="btn-primary" onclick="window.login()" style="width:100%;">Masuk</button>
                 <p style="margin-top:10px; font-size:14px; color:#64748b;">Akun bawaan: <strong>ketua@panitia.com</strong> (password: rahasia123)</p>
+                <p style="font-size:14px; color:#2563eb;">🔑 Super Admin: <strong>admin@panitia.com</strong> (password: admin123) — bebas akses</p>
                 <p class="auth-toggle" onclick="window.toggleAuth('register')">Belum punya akun? Daftar di sini</p>
                 <div id="loginMessage" style="margin-top:10px; color:#b91c1c;"></div>
                 <div id="resetMessage" style="margin-top:10px; color:#2563eb;"></div>
@@ -57,16 +58,9 @@
 
     <!-- Load Modul JavaScript -->
     <script type="module">
-        // Import semua modul yang diperlukan
         import { initApp, login, register, logout, toggleAuth, resetPassword, goHome, navigateTo } from './js/app.js';
-        import { renderKetua } from './js/roles/ketua.js';
-        import { renderBendahara } from './js/roles/bendahara.js';
-        import { renderSekretaris } from './js/roles/sekretaris.js';
-        import { renderSie } from './js/roles/sie.js';
-        import { renderHumas } from './js/roles/humas.js';
-        import { renderDpl } from './js/roles/dpl.js';
 
-        // Ekspos fungsi ke window agar bisa dipanggil dari HTML
+        // Ekspos fungsi ke window
         window.login = login;
         window.register = register;
         window.logout = logout;
