@@ -1,6 +1,77 @@
-// ============================================================
-// DEFAULT ROLES (tambahkan superadmin)
-// ============================================================
+// ================================================================
+// js/app.js - Inisialisasi Firebase, Auth, Router
+// ================================================================
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
+import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    sendPasswordResetEmail,
+    updatePassword
+} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js';
+import {
+    getFirestore,
+    doc,
+    getDoc,
+    setDoc,
+    updateDoc,
+    collection,
+    addDoc,
+    query,
+    getDocs,
+    orderBy,
+    where,
+    deleteDoc,
+    serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js';
+import { getStorage } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js';
+
+// ================================================================
+// 1. KONFIGURASI FIREBASE (GANTI DENGAN PUNYAMU)
+// ================================================================
+const firebaseConfig = {
+    apiKey: "AIzaSyDummyKey_IsikanDenganPunyaSendiri",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcdef"
+};
+
+// ================================================================
+// 2. INISIALISASI FIREBASE
+// ================================================================
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+
+// ================================================================
+// 3. VARIABEL GLOBAL
+// ================================================================
+export let currentUser = null;
+export let currentUserRole = null;
+export let currentUserPoints = 0;
+
+const DIVISIONS = ['acara', 'logistik', 'akademi', 'dekdok'];
+
+// Role yang diakui & label menu
+const MENU_LABEL = {
+    superadmin: { label: '👑 Super Admin', desc: 'Testing - Full Akses' },
+    ketua: { label: '👤 Ketua', desc: 'Set Deadline & Pantau' },
+    bendahara: { label: '💰 Bendahara', desc: 'Input Keuangan' },
+    sekretaris: { label: '📝 Sekretaris', desc: 'Logbook & Rekap' },
+    acara: { label: '🎉 Sie Acara', desc: 'Kegiatan' },
+    logistik: { label: '📦 Sie Logistik', desc: 'Kegiatan' },
+    akademi: { label: '📚 Sie Akademi', desc: 'Kegiatan' },
+    dekdok: { label: '📸 Sie Dekdok', desc: 'Kegiatan' },
+    humas: { label: '📢 Humas', desc: 'Lihat semua & dokumentasi' },
+    dpl: { label: '👀 DPL Monitoring', desc: 'Pantau semua aktivitas' }
+};
+
+// Akun bawaan dengan role default (password: rahasia123)
 const DEFAULT_ROLES = {
     'ketua@panitia.com': 'ketua',
     'bendahara@panitia.com': 'bendahara',
@@ -11,68 +82,385 @@ const DEFAULT_ROLES = {
     'sie_dekdok@panitia.com': 'sie_dekdok',
     'humas@panitia.com': 'humas',
     'dpl@panitia.com': 'dpl',
-    'admin@panitia.com': 'superadmin'  // 🔥 TAMBAHKAN
+    'admin@panitia.com': 'superadmin'   // akun testing
 };
 
-// ============================================================
-// MENU LABEL (tambahkan untuk superadmin)
-// ============================================================
-const MENU_LABEL = {
-    superadmin: { label: '👑 Super Admin', desc: 'Testing - Full Akses' }, // 🔥
-    ketua: { label: '👤 Ketua', desc: 'Set Deadline & Pantau' },
-    // ... sisanya sama
-};
+// ================================================================
+// 4. FUNGSI AUTH
+// ================================================================
 
-// ============================================================
-// FUNGSI getCurrentAllowedRoles (tambahkan superadmin)
-// ============================================================
+// Toggle form login / register
+export function toggleAuth(mode) {
+    if (mode === 'login') {
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+    } else {
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+    }
+}
+
+// Fungsi Login
+export async function login() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    const msg = document.getElementById('loginMessage');
+    msg.innerText = '';
+    try {
+        await signInWithEmailAndPassword(auth, email, pass);
+    } catch (e) {
+        // Jika akun belum ada tapi termasuk daftar akun bawaan, buat otomatis
+        if (e.code === 'auth/user-not-found' && DEFAULT_ROLES[email]) {
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                const role = DEFAULT_ROLES[email];
+                // Superadmin langsung bisa login tanpa ganti password
+                const isFirstLogin = (role === 'superadmin') ? false : true;
+                await setDoc(doc(db, 'users', cred.user.uid), {
+                    email: email,
+                    role: role,
+                    points: 0,
+                    isFirstLogin: isFirstLogin,
+                    canChangePassword: (role === 'superadmin') ? false : true,
+                    createdAt: serverTimestamp()
+                });
+                // Login ulang agar state terupdate
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (err) {
+                msg.innerText = '❌ Gagal membuat akun bawaan: ' + err.message;
+            }
+        } else {
+            msg.innerText = '❌ ' + e.message;
+        }
+    }
+}
+
+// Fungsi Register (untuk akun baru)
+export async function register() {
+    const email = document.getElementById('registerEmail').value.trim();
+    const pass = document.getElementById('registerPassword').value;
+    const msg = document.getElementById('registerMessage');
+    msg.innerText = '';
+    try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        // Akun baru default role 'member' dan wajib ganti password
+        await setDoc(doc(db, 'users', cred.user.uid), {
+            email: email,
+            role: 'member',
+            points: 0,
+            isFirstLogin: true,
+            canChangePassword: true,
+            createdAt: serverTimestamp()
+        });
+        msg.innerText = '✅ Akun berhasil dibuat! Silakan login.';
+        document.getElementById('registerEmail').value = '';
+        document.getElementById('registerPassword').value = '';
+        toggleAuth('login');
+    } catch (e) {
+        msg.innerText = '❌ ' + e.message;
+    }
+}
+
+// Logout
+export function logout() {
+    auth.signOut();
+}
+
+// Reset Password (kirim email)
+export async function resetPassword() {
+    const email = prompt('Masukkan email Anda untuk menerima link reset password:');
+    if (!email) return;
+    try {
+        await sendPasswordResetEmail(auth, email);
+        document.getElementById('resetMessage').innerHTML = '✅ Email reset telah dikirim. Cek kotak masuk/spam.';
+    } catch (e) {
+        alert('Gagal kirim reset: ' + e.message);
+    }
+}
+
+// ================================================================
+// 5. FORCE CHANGE PASSWORD (Wajib Ganti Password)
+// ================================================================
+
+async function showForceChangePasswordModal(uid) {
+    const newPass = prompt(
+        '⚠️ Anda harus mengganti password sebelum masuk.\n' +
+        'Password minimal 6 karakter.\n\n' +
+        'Masukkan password baru:'
+    );
+    if (!newPass || newPass.length < 6) {
+        alert('Password minimal 6 karakter. Silakan logout dan login kembali.');
+        auth.signOut();
+        return;
+    }
+    try {
+        // Update password di Firebase Auth
+        await updatePassword(currentUser, newPass);
+        // Simpan password terenkripsi di Firestore (supaya Ketua bisa melihat)
+        const encrypted = encryptPassword(newPass);
+        await updateDoc(doc(db, 'users', uid), {
+            passwordEncrypted: encrypted,
+            isFirstLogin: false,
+            canChangePassword: false
+        });
+        alert('✅ Password berhasil diubah! Silakan login kembali.');
+        auth.signOut();
+    } catch (e) {
+        alert('❌ Gagal mengganti password: ' + e.message);
+        auth.signOut();
+    }
+}
+
+// Enkripsi sederhana (untuk penyimpanan password agar Ketua bisa melihat)
+function encryptPassword(password) {
+    const SALT = 'rahasiaPanitia2024'; // Ganti dengan kunci rahasia
+    return btoa(password + SALT);
+}
+
+// ================================================================
+// 6. AUTH STATE OBSERVER
+// ================================================================
+
+export function initApp() {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            document.getElementById('logoutBtn').style.display = 'block';
+            document.getElementById('login-page').style.display = 'none';
+
+            // Catat log login (untuk DPL)
+            try {
+                await addDoc(collection(db, 'login_logs'), {
+                    uid: user.uid,
+                    email: user.email,
+                    timestamp: serverTimestamp()
+                });
+            } catch (e) {
+                console.warn('Gagal catat log login:', e);
+            }
+
+            // Ambil data user dari Firestore
+            try {
+                const docSnap = await getDoc(doc(db, 'users', user.uid));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    currentUserRole = data.role || 'member';
+                    currentUserPoints = data.points || 0;
+
+                    // 🔥 SUPERADMIN: langsung masuk tanpa force change password
+                    if (currentUserRole === 'superadmin') {
+                        showHome();
+                        return;
+                    }
+
+                    // Cek apakah harus ganti password pertama kali
+                    if (data.isFirstLogin) {
+                        showForceChangePasswordModal(user.uid);
+                        return;
+                    }
+                } else {
+                    // Jika dokumen belum ada (misal dibuat via console)
+                    await setDoc(doc(db, 'users', user.uid), {
+                        email: user.email,
+                        role: 'member',
+                        points: 0,
+                        isFirstLogin: true,
+                        canChangePassword: true,
+                        createdAt: serverTimestamp()
+                    });
+                    currentUserRole = 'member';
+                    currentUserPoints = 0;
+                    showForceChangePasswordModal(user.uid);
+                    return;
+                }
+            } catch (e) {
+                console.error('❌ Gagal ambil data user:', e);
+                currentUserRole = 'member';
+                currentUserPoints = 0;
+            }
+
+            // Tampilkan halaman utama
+            showHome();
+
+        } else {
+            // User logout
+            currentUser = null;
+            currentUserRole = null;
+            currentUserPoints = 0;
+
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('login-page').style.display = 'block';
+
+            // Sembunyikan semua halaman
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-home').classList.remove('active');
+            document.getElementById('page-dynamic').classList.remove('active');
+
+            // Reset form login
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginMessage').innerText = '';
+            document.getElementById('registerMessage').innerText = '';
+            document.getElementById('resetMessage').innerHTML = '';
+        }
+    });
+}
+
+// ================================================================
+// 7. HOME & NAVIGASI
+// ================================================================
+
+// Tampilkan halaman utama dengan menu sesuai role
+export function showHome() {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-home').classList.add('active');
+    document.getElementById('page-dynamic').classList.remove('active');
+
+    // Update profil
+    const profile = document.getElementById('profileCard');
+    if (currentUser) {
+        profile.innerHTML = `
+            <div class="info">
+                <span>📧 ${currentUser.email}</span>
+                <span>🎯 Role: <strong>${currentUserRole}</strong></span>
+            </div>
+            <div class="points">⭐ Poin: ${currentUserPoints}</div>
+        `;
+    } else {
+        profile.innerHTML = '';
+    }
+
+    // Tampilkan menu berdasarkan role
+    const container = document.getElementById('menuCards');
+    const allowed = getCurrentAllowedRoles();
+
+    if (allowed.length === 0) {
+        container.innerHTML = `
+            <p style="grid-column:1/-1; text-align:center; color:#b91c1c;">
+                ❌ Role Anda (${currentUserRole}) tidak memiliki akses. Hubungi admin.
+            </p>`;
+        return;
+    }
+
+    let html = '';
+    allowed.forEach(key => {
+        const info = MENU_LABEL[key];
+        if (info) {
+            html += `
+                <div class="card" onclick="window.navigateTo('${key}')">
+                    <h3>${info.label}</h3>
+                    <span class="badge">${info.desc}</span>
+                </div>`;
+        }
+    });
+    container.innerHTML = html;
+}
+
+// Dapatkan daftar menu yang diizinkan berdasarkan role
 function getCurrentAllowedRoles() {
-    // 🔥 Superadmin dapat akses semua menu
+    // Superadmin dan Ketua dapat mengakses semua menu
     if (currentUserRole === 'superadmin' || currentUserRole === 'ketua') {
         return ['ketua', 'bendahara', 'sekretaris', 'acara', 'logistik', 'akademi', 'dekdok', 'humas', 'dpl'];
     }
-    // ... sisanya sama
     if (currentUserRole === 'bendahara') return ['bendahara'];
     if (currentUserRole === 'sekretaris') return ['sekretaris'];
-    // ... dst
+    if (currentUserRole === 'sie_acara') return ['acara'];
+    if (currentUserRole === 'sie_logistik') return ['logistik'];
+    if (currentUserRole === 'sie_akademi') return ['akademi'];
+    if (currentUserRole === 'sie_dekdok') return ['dekdok'];
+    if (currentUserRole === 'humas') return ['humas'];
+    if (currentUserRole === 'dpl') return ['dpl'];
+    return [];
 }
 
-// ============================================================
-// FUNGSI login (buat akun superadmin tanpa isFirstLogin)
-// ============================================================
-// Di dalam try-catch setelah createUserWithEmailAndPassword:
-const cred = await createUserWithEmailAndPassword(auth, email, pass);
-const role = DEFAULT_ROLES[email];
-// 🔥 Superadmin langsung bisa login, tidak perlu ganti password
-const isFirstLogin = (role === 'superadmin') ? false : true;
-await setDoc(doc(db, 'users', cred.user.uid), {
-    email: email,
-    role: role,
-    points: 0,
-    isFirstLogin: isFirstLogin,
-    canChangePassword: (role === 'superadmin') ? false : true,
-    createdAt: new Date()
-});
-
-// ============================================================
-// AUTH STATE OBSERVER (initApp) - lewati cek isFirstLogin untuk superadmin
-// ============================================================
-// Di dalam onAuthStateChanged, setelah ambil data user:
-const docSnap = await getDoc(doc(db, 'users', user.uid));
-if (docSnap.exists()) {
-    const data = docSnap.data();
-    currentUserRole = data.role || 'member';
-    currentUserPoints = data.points || 0;
-    
-    // 🔥 Jika superadmin, langsung masuk tanpa force change password
-    if (currentUserRole === 'superadmin') {
-        showHome();
+// Navigasi ke halaman role tertentu
+export function navigateTo(role) {
+    const allowed = getCurrentAllowedRoles();
+    if (!allowed.includes(role)) {
+        alert('Anda tidak memiliki akses ke halaman ini.');
         return;
     }
-    
-    // Cek isFirstLogin untuk role lain
-    if (data.isFirstLogin) {
-        showForceChangePasswordModal(user.uid);
-        return;
+
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-home').classList.remove('active');
+    document.getElementById('page-dynamic').classList.add('active');
+
+    const titleMap = {
+        'ketua': '👤 Panel Ketua',
+        'bendahara': '💰 Panel Bendahara',
+        'sekretaris': '📝 Panel Sekretaris',
+        'acara': '🎉 Sie Acara',
+        'logistik': '📦 Sie Logistik',
+        'akademi': '📚 Sie Akademi',
+        'dekdok': '📸 Sie Dekdok',
+        'humas': '📢 Panel Humas',
+        'dpl': '👀 Dashboard DPL'
+    };
+    document.getElementById('dynamic-title').innerText = titleMap[role] || role;
+
+    renderPage(role);
+}
+
+// Render halaman sesuai role (lazy load modul)
+async function renderPage(role) {
+    const container = document.getElementById('dynamic-content');
+
+    if (role === 'ketua') {
+        const { renderKetua } = await import('./roles/ketua.js');
+        renderKetua(container);
+    } else if (role === 'bendahara') {
+        const { renderBendahara } = await import('./roles/bendahara.js');
+        renderBendahara(container);
+    } else if (role === 'sekretaris') {
+        const { renderSekretaris } = await import('./roles/sekretaris.js');
+        renderSekretaris(container);
+    } else if (DIVISIONS.includes(role)) {
+        const { renderSie } = await import('./roles/sie.js');
+        renderSie(container, role);
+    } else if (role === 'humas') {
+        const { renderHumas } = await import('./roles/humas.js');
+        renderHumas(container);
+    } else if (role === 'dpl') {
+        const { renderDpl } = await import('./roles/dpl.js');
+        renderDpl(container);
+    } else {
+        container.innerHTML = '<p>Role tidak dikenal.</p>';
     }
 }
+
+// Kembali ke halaman utama
+export function goHome() {
+    showHome();
+}
+
+// ================================================================
+// 8. EKSPOS FUNGSI KE WINDOW (Agar bisa dipanggil dari HTML)
+// ================================================================
+
+// Fungsi-fungsi yang dipanggil dari onclick di HTML
+window.login = login;
+window.register = register;
+window.logout = logout;
+window.toggleAuth = toggleAuth;
+window.resetPassword = resetPassword;
+window.goHome = goHome;
+window.navigateTo = navigateTo;
+
+// Fungsi-fungsi yang akan diisi oleh modul role (di-set nanti)
+window.setDeadline = null;
+window.switchKetuaTab = null;
+window.editActivity = null;
+window.exportWordToDoc = null;
+window.submitMeeting = null;
+
+console.log('🚀 Aplikasi siap! Akun bawaan:');
+console.log('  admin@panitia.com / admin123 (Super Admin - testing)');
+console.log('  ketua@panitia.com / rahasia123');
+console.log('  bendahara@panitia.com / rahasia123');
+console.log('  sekretaris@panitia.com / rahasia123');
+console.log('  sie_acara@panitia.com / rahasia123');
+console.log('  sie_logistik@panitia.com / rahasia123');
+console.log('  sie_akademi@panitia.com / rahasia123');
+console.log('  sie_dekdok@panitia.com / rahasia123');
+console.log('  humas@panitia.com / rahasia123');
+console.log('  dpl@panitia.com / rahasia123');
